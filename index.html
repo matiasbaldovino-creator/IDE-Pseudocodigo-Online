@@ -5158,7 +5158,8 @@ FinAlgoritmo`,
         4: Escribir "Jueves";
         5: Escribir "Viernes";
         6, 7: Escribir "Fin de semana";
-        De Otro Modo: Escribir "Número inválido";
+        De Otro Modo:
+        Escribir "Número inválido";
     FinSegun
 FinAlgoritmo`,
         exercise:`<strong>Ejercicio:</strong> Leé una nota del 1 al 5 y mostrá: 5→Excelente, 4→Muy bien, 3→Bien, 1 o 2→Insuficiente, otro→Inválido. Probalo con <strong>4</strong>.`,
@@ -5172,7 +5173,8 @@ FinAlgoritmo`,
         4: Escribir "Muy bien";
         3: Escribir "Bien";
         1, 2: Escribir "Insuficiente";
-        De Otro Modo: Escribir "Inválido";
+        De Otro Modo:
+            Escribir "Inválido";
     FinSegun
 FinAlgoritmo`,
         verify:{ inputs:['4'], expectedOutput:['muy bien'], mode:'contains' }
@@ -5354,7 +5356,9 @@ FinAlgoritmo`,
                 resultado <- n1 / n2;
                 Escribir "Resultado: ", resultado;
             FinSi
-        De Otro Modo: Escribir "Operación inválida";
+        De Otro Modo:
+            // Ingresá 1 para suma, 2 para resta, 3 para multiplicación, 4 para división
+            Escribir "Operación inválida. Ingresá 1, 2, 3 o 4.";
     FinSegun
     Si op <> 4 Y op >= 1 Y op <= 3 Entonces
         Escribir "Resultado: ", resultado;
@@ -5488,8 +5492,12 @@ FinAlgoritmo`,
     menor <- datos[1];
     Para i <- 1 Hasta 6 Hacer
         suma <- suma + datos[i];
-        Si datos[i] > mayor Entonces mayor <- datos[i]; FinSi
-        Si datos[i] < menor Entonces menor <- datos[i]; FinSi
+        Si datos[i] > mayor Entonces
+            mayor <- datos[i];
+        FinSi
+        Si datos[i] < menor Entonces
+            menor <- datos[i];
+        FinSi
     FinPara
     Escribir "Suma: ", suma;
     Escribir "Promedio: ", suma / 6;
