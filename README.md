@@ -3,7 +3,9 @@
 > Un entorno de desarrollo en línea gratuito, liviano y sin publicidad, diseñado para enseñar, aprender y practicar lógica de programación con sintaxis tipo PSeInt.
 
 [![MercadoPago](https://img.shields.io/badge/Donar-MercadoPago_Uruguay-009EE3?style=flat&logo=mercadopago&logoColor=white)](https://link.mercadopago.com.uy/matiasbaldovino)
+
 [![PayPal](https://img.shields.io/badge/Donar-PayPal_Internacional-003087?style=flat&logo=paypal&logoColor=white)](https://www.paypal.me/matiasbaldovino)
+
 [![License: MIT](https://img.shields.io/badge/Licencia-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ---
