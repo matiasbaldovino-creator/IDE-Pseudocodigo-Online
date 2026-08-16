@@ -3,9 +3,7 @@
 > Un entorno de desarrollo en línea gratuito, liviano y sin publicidad, diseñado para enseñar, aprender y practicar lógica de programación con sintaxis tipo PSeInt.
 
 [![MercadoPago](https://img.shields.io/badge/Donar-MercadoPago_Uruguay-009EE3?style=flat&logo=mercadopago&logoColor=white)](https://link.mercadopago.com.uy/matiasbaldovino)
-
 [![PayPal](https://img.shields.io/badge/Donar-PayPal_Internacional-003087?style=flat&logo=paypal&logoColor=white)](https://www.paypal.me/matiasbaldovino)
-
 [![License: MIT](https://img.shields.io/badge/Licencia-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -25,7 +23,8 @@ Como proyecto personal e independiente, desarrollé esta solución basada en tre
 
 ## ✨ Características Principales
 
-* 💻 **Editor optimizado:** Soporte fluido para caracteres especiales y sintaxis en español.
+* 💻📱 **Diseño 100% Responsivo:** Interfaz adaptada tanto para dispositivos móviles como para computadoras de escritorio, manteniendo todas sus funciones y calidad sin importar el dispositivo.
+* ✍️ **Editor optimizado:** Soporte fluido para caracteres especiales y sintaxis en español.
 * 📚 **Documentación integrada:** Guía completa de sintaxis accesible directamente desde el IDE para consultar estructuras y comandos sin salir de la plataforma.
 * 🎓 **Sección de aprendizaje y práctica:** Ejemplos guiados y ejercicios prácticos autoevaluados diseñados para reforzar conceptos y permitir un aprendizaje autónomo.
 * ⚡ **Ejecución ágil en cliente:** Procesamiento instantáneo sin tiempos de espera por servidores.
