@@ -1000,6 +1000,7 @@
     min-height: 0;
     min-width: 0;
     overflow: hidden;
+    position: relative;
   }
   .editor-pane, .console-pane {
     display: flex;
@@ -1010,6 +1011,30 @@
   }
   .editor-pane { flex: 1.4; border-right: 1px solid var(--border); }
   .console-pane { flex: 1; }
+
+  /* Divisor arrastrable */
+  .pane-resizer {
+    width: 5px;
+    background: var(--border);
+    cursor: col-resize;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    transition: background 0.15s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .pane-resizer:hover,
+  .pane-resizer.dragging { background: var(--accent); }
+  .pane-resizer::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 1px; height: 32px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 1px;
+  }
 
   .pane-header {
     background: var(--bg-panel);
@@ -1022,7 +1047,27 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
+    gap: 8px;
   }
+  .pane-header-left  { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .pane-header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+  /* Botón pantalla completa del panel */
+  .pane-fullscreen-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-dim);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 1px 4px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .pane-fullscreen-btn:hover { background: var(--border); color: var(--text-main); }
+  .pane-fullscreen-btn.active { color: var(--accent); background: rgba(86,156,214,0.12); }
   #currentFileName {
     text-transform: none;
     letter-spacing: 0;
@@ -1452,6 +1497,9 @@
       height: 9px;
     }
     body.light .toggle-pill::after { transform: translateX(11px); }
+    /* Ocultar solo el resizer en móvil (layout vertical, no tiene sentido arrastrar) */
+    .pane-resizer { display: none; }
+    /* Los botones de pantalla completa sí son útiles en móvil */
     /* Scrollbars más delgadas en móvil */
     ::-webkit-scrollbar { width: 4px; height: 4px; }
   }
@@ -1495,8 +1543,14 @@
       </div>
     </div>
 
-    <div class="editor-pane">
-      <div class="pane-header"><span>Editor — <span id="currentFileName">sin título</span></span><span id="lineCount">0 líneas</span></div>
+    <div class="editor-pane" id="editorPane">
+      <div class="pane-header">
+        <div class="pane-header-left"><span>Editor — <span id="currentFileName">sin título</span></span></div>
+        <div class="pane-header-right">
+          <span id="lineCount">0 líneas</span>
+          <button class="pane-fullscreen-btn" id="editorFullscreenBtn" title="Pantalla completa del editor">⛶</button>
+        </div>
+      </div>
       <div class="editor-wrap">
         <div class="gutter" id="gutter">1</div>
         <div class="code-area-wrap">
@@ -1505,8 +1559,17 @@
         </div>
       </div>
     </div>
-    <div class="console-pane">
-      <div class="pane-header"><span>Consola</span><span id="execState">Listo</span></div>
+    <!-- Divisor arrastrable -->
+    <div class="pane-resizer" id="paneResizer"></div>
+
+    <div class="console-pane" id="consolePane">
+      <div class="pane-header">
+        <div class="pane-header-left"><span>Consola</span></div>
+        <div class="pane-header-right">
+          <span id="execState">Listo</span>
+          <button class="pane-fullscreen-btn" id="consoleFullscreenBtn" title="Pantalla completa de la consola">⛶</button>
+        </div>
+      </div>
       <pre id="consoleOutput"></pre>
     </div>
   </div>
@@ -2676,15 +2739,17 @@ function parseProgram(sourceText) {
 // Divide por comas de nivel superior (no dentro de paréntesis ni strings)
 function splitTopLevelCommas(text) {
   const parts = [];
-  let depth = 0, inStr = false, current = '';
+  let depth = 0, bracketDepth = 0, inStr = false, current = '';
   for (let i=0;i<text.length;i++) {
     const ch = text[i];
     if (ch === '"') inStr = !inStr;
     if (!inStr) {
       if (ch === '(') depth++;
       if (ch === ')') depth--;
+      if (ch === '[') bracketDepth++;
+      if (ch === ']') bracketDepth--;
     }
-    if (ch === ',' && depth === 0 && !inStr) {
+    if (ch === ',' && depth === 0 && bracketDepth === 0 && !inStr) {
       parts.push(current.trim());
       current = '';
       continue;
@@ -2709,8 +2774,73 @@ class PseudoError extends Error {
   }
 }
 
+// Convierte accesos 2D estilo PSeInt  arr[i, j]  →  arr[i][j]  para JS
+// Maneja expresiones complejas como arr[a+1, b*2] correctamente
+// Detecta si hay una coma de nivel top en un string (para índices 2D)
+function splitIndex2D(indexStr) {
+  let depth = 0;
+  for (let i = 0; i < indexStr.length; i++) {
+    const c = indexStr[i];
+    if (c === '(' || c === '[') depth++;
+    else if (c === ')' || c === ']') depth--;
+    else if (c === ',' && depth === 0) {
+      return [indexStr.slice(0, i).trim(), indexStr.slice(i + 1).trim()];
+    }
+  }
+  return null; // 1D
+}
+
+
+function preprocess2DArrayAccess(expr) {
+  // Buscar patrones: nombre[...,...] donde la coma es de nivel superior
+  let result = '';
+  let i = 0;
+  while (i < expr.length) {
+    // Detectar inicio de acceso a arreglo: identificador seguido de [
+    const identMatch = /^([A-Za-záéíóúñÁÉÍÓÚÑ_]\w*)(\s*\[)/.exec(expr.slice(i));
+    if (!identMatch) {
+      result += expr[i++];
+      continue;
+    }
+    // Avanzar el identificador
+    result += identMatch[1];
+    i += identMatch[1].length;
+    // Ahora estamos en el '['
+    i++; // consume '['
+    result += '[';
+    // Leer el contenido del [...] buscando la coma de nivel superior
+    let depth = 1;
+    let content = '';
+    let commaPos = -1;
+    const start = i;
+    while (i < expr.length && depth > 0) {
+      const ch = expr[i];
+      if (ch === '[' || ch === '(') depth++;
+      else if (ch === ']' || ch === ')') {
+        depth--;
+        if (depth === 0) break;
+      } else if (ch === ',' && depth === 1 && commaPos === -1) {
+        commaPos = content.length;
+      }
+      content += ch;
+      i++;
+    }
+    i++; // consume ']'
+    if (commaPos >= 0) {
+      // 2D: arr[i, j] → arr[i][j]
+      const idx1 = content.slice(0, commaPos).trim();
+      const idx2 = content.slice(commaPos + 1).trim();
+      result += idx1 + '][' + idx2 + ']';
+    } else {
+      result += content + ']';
+    }
+  }
+  return result;
+}
+
 function translateExpression(expr, scope) {
-  let e = expr;
+  let e = preprocess2DArrayAccess(expr);
+  // Reemplazar accesos 1D también: var[idx] → scope var (JS lo maneja solo)
   scope = scope || {};
 
   // Proteger strings: extraer literales y reemplazar temporalmente
@@ -2899,8 +3029,23 @@ const RUNTIME_HELPERS = `
 `;
 
 function evaluateExpression(expr, scope, line) {
-  // Limpiar punto y coma residual al final (por si viene de un Hasta Que x; u otro)
-  const cleanExpr = expr.trim().replace(/;+$/, '');
+  // Limpiar punto y coma residual al final
+  let cleanExpr = expr.trim().replace(/;+$/, '');
+  // Reescribir arr[x, y] → arr[x][y] para arreglos 2D
+  // Busca patrones identificador[...,...] y convierte la coma de nivel superior
+  cleanExpr = cleanExpr.replace(/([A-Za-záéíóúñÁÉÍÓÚÑ_]\w*)\s*\[([^\]]+)\]/g, (match, name, idx) => {
+    // Buscar coma de nivel superior dentro del índice
+    let d = 0, cp = -1;
+    for (let k = 0; k < idx.length; k++) {
+      if (idx[k] === '(') d++;
+      else if (idx[k] === ')') d--;
+      else if (idx[k] === ',' && d === 0) { cp = k; break; }
+    }
+    if (cp >= 0) {
+      return name + '[' + idx.slice(0, cp).trim() + '][' + idx.slice(cp+1).trim() + ']';
+    }
+    return match;
+  });
   const translated = translateExpression(cleanExpr, scope);
   const varNames = Object.keys(scope);
   try {
@@ -3202,12 +3347,51 @@ async function runInterpreter({ mainAst, subDefs }) {
       return evaluateExpressionWithScope(expr, localScope, line);
     }
 
+
+  // Parsea el índice de un arreglo. Si tiene coma de nivel superior → 2D.
+  function parseArrayIndex(idxStr) {
+    // Buscar coma que no esté dentro de paréntesis
+    let depth = 0;
+    for (let k = 0; k < idxStr.length; k++) {
+      if (idxStr[k] === '(') depth++;
+      else if (idxStr[k] === ')') depth--;
+      else if (idxStr[k] === ',' && depth === 0) {
+        return { is2D: true, idx1: idxStr.slice(0, k).trim(), idx2: idxStr.slice(k+1).trim() };
+      }
+    }
+    return { is2D: false, idx1: idxStr.trim() };
+  }
+
     function assignVariableLocal(target, value, line) {
       const arrMatch = /^([A-Za-zÁÉÍÓÚÑáéíóúñ_]\w*)\s*\[(.+)\]$/.exec(target);
       if (arrMatch) {
-        const idx = evaluateExpressionLocal(arrMatch[2], line);
-        if (!Array.isArray(localScope[arrMatch[1]])) localScope[arrMatch[1]] = [];
-        localScope[arrMatch[1]][idx] = value;
+        const varName = arrMatch[1];
+        const parsed = parseArrayIndex(arrMatch[2]);
+        if (parsed.is2D) {
+          const i1 = evaluateExpressionLocal(parsed.idx1, line);
+          const i2 = evaluateExpressionLocal(parsed.idx2, line);
+          const arr = localScope[varName];
+          if (Array.isArray(arr) && Array.isArray(arr[1])) {
+            const rows = arr.length - 1, cols = arr[1].length - 1;
+            if (i1 < 1 || i1 > rows || i2 < 1 || i2 > cols)
+              throw new PseudoError(`Índice fuera de rango: ${varName}[${i1}, ${i2}] — el arreglo es de ${rows}x${cols}.`, line,
+                [`Los índices válidos son de 1 a ${rows} (filas) y 1 a ${cols} (columnas).`]);
+          }
+          if (!Array.isArray(localScope[varName])) localScope[varName] = [];
+          if (!Array.isArray(localScope[varName][i1])) localScope[varName][i1] = [];
+          localScope[varName][i1][i2] = value;
+        } else {
+          const idx = evaluateExpressionLocal(parsed.idx1, line);
+          const arr = localScope[varName];
+          if (Array.isArray(arr)) {
+            const size = arr.length - 1;
+            if (idx < 1 || idx > size)
+              throw new PseudoError(`Índice fuera de rango: ${varName}[${idx}] — el arreglo tiene ${size} elemento(s).`, line,
+                [`Los índices válidos son de 1 a ${size}.`]);
+          }
+          if (!Array.isArray(localScope[varName])) localScope[varName] = [];
+          localScope[varName][idx] = value;
+        }
         return;
       }
       localScope[target] = value;
@@ -3527,9 +3711,40 @@ async function runInterpreter({ mainAst, subDefs }) {
   function assignVariable(target, value, line) {
     const arrMatch = /^([A-Za-zÁÉÍÓÚÑáéíóúñ_][A-Za-zÁÉÍÓÚÑáéíóúñ0-9_]*)\s*\[(.+)\]$/.exec(target);
     if (arrMatch) {
-      const idx = evaluateExpressionWithScope(arrMatch[2], scope, line);
-      if (!Array.isArray(scope[arrMatch[1]])) scope[arrMatch[1]] = [];
-      scope[arrMatch[1]][idx] = value;
+      const varName = arrMatch[1];
+      const idxStr  = arrMatch[2];
+      // Detectar coma de nivel top (2D)
+      let depth2 = 0, commaPos = -1;
+      for (let k = 0; k < idxStr.length; k++) {
+        if (idxStr[k] === '(' || idxStr[k] === '[') depth2++;
+        else if (idxStr[k] === ')' || idxStr[k] === ']') depth2--;
+        else if (idxStr[k] === ',' && depth2 === 0) { commaPos = k; break; }
+      }
+      if (commaPos >= 0) {
+        const i1 = evaluateExpressionWithScope(idxStr.slice(0, commaPos).trim(), scope, line);
+        const i2 = evaluateExpressionWithScope(idxStr.slice(commaPos+1).trim(), scope, line);
+        const arr = scope[varName];
+        if (Array.isArray(arr) && Array.isArray(arr[1])) {
+          const rows = arr.length - 1, cols = arr[1].length - 1;
+          if (i1 < 1 || i1 > rows || i2 < 1 || i2 > cols)
+            throw new PseudoError(`Índice fuera de rango: ${varName}[${i1}, ${i2}] — el arreglo es de ${rows}x${cols}.`, line,
+              [`Los índices válidos son de 1 a ${rows} (filas) y 1 a ${cols} (columnas).`]);
+        }
+        if (!Array.isArray(scope[varName])) scope[varName] = [];
+        if (!Array.isArray(scope[varName][i1])) scope[varName][i1] = [];
+        scope[varName][i1][i2] = value;
+      } else {
+        const idx = evaluateExpressionWithScope(idxStr, scope, line);
+        const arr = scope[varName];
+        if (Array.isArray(arr)) {
+          const size = arr.length - 1;
+          if (idx < 1 || idx > size)
+            throw new PseudoError(`Índice fuera de rango: ${varName}[${idx}] — el arreglo tiene ${size} elemento(s).`, line,
+              [`Los índices válidos son de 1 a ${size}.`]);
+        }
+        if (!Array.isArray(scope[varName])) scope[varName] = [];
+        scope[varName][idx] = value;
+      }
       return;
     }
     scope[target] = value;
@@ -5898,6 +6113,161 @@ learnBtn2.addEventListener('click', () => learnOverlay.classList.contains('open'
 learnClose2.addEventListener('click', closeLearn);
 learnOverlay.addEventListener('click', e => { if (e.target === learnOverlay) closeLearn(); });
 document.addEventListener('keydown', e => { if (e.key==='Escape' && learnOverlay.classList.contains('open')) closeLearn(); });
+
+/* =========================================================================
+   REDIMENSIONAR PANELES Y PANTALLA COMPLETA
+   ========================================================================= */
+(function() {
+  var editorPane   = document.getElementById('editorPane');
+  var consolePane  = document.getElementById('consolePane');
+  var paneResizer  = document.getElementById('paneResizer');
+  var editorFSBtn  = document.getElementById('editorFullscreenBtn');
+  var consoleFSBtn = document.getElementById('consoleFullscreenBtn');
+  var mainEl       = document.querySelector('.main');
+
+  if (!editorPane || !consolePane || !paneResizer) return;
+
+  // ── Drag to resize ──────────────────────────────────────────────────────
+  var isResizing = false, startX = 0, startW = 0, totalW = 0;
+
+  function startResize(clientX) {
+    isResizing = true;
+    startX     = clientX;
+    startW     = editorPane.getBoundingClientRect().width;
+    totalW     = mainEl.getBoundingClientRect().width;
+    paneResizer.classList.add('dragging');
+    document.body.style.cursor     = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }
+
+  function doResize(clientX) {
+    if (!isResizing) return;
+    var newW = Math.max(150, Math.min(totalW - 155, startW + (clientX - startX)));
+    editorPane.style.flex  = '0 0 ' + newW + 'px';
+    consolePane.style.flex = '0 0 ' + (totalW - newW - 5) + 'px';
+    if (typeof updateEditorView === 'function') updateEditorView();
+  }
+
+  function stopResize() {
+    if (!isResizing) return;
+    isResizing = false;
+    paneResizer.classList.remove('dragging');
+    document.body.style.cursor     = '';
+    document.body.style.userSelect = '';
+    if (typeof updateEditorView === 'function') updateEditorView();
+  }
+
+  paneResizer.addEventListener('mousedown',  function(e) { startResize(e.clientX); e.preventDefault(); });
+  paneResizer.addEventListener('touchstart', function(e) { startResize(e.touches[0].clientX); }, { passive: true });
+  document.addEventListener('mousemove',  function(e) { doResize(e.clientX); });
+  document.addEventListener('touchmove',  function(e) { if (isResizing) doResize(e.touches[0].clientX); }, { passive: true });
+  document.addEventListener('mouseup',   stopResize);
+  document.addEventListener('touchend',  stopResize);
+
+  // Doble clic → restaurar proporciones por defecto
+  paneResizer.addEventListener('dblclick', function() {
+    editorPane.style.flex  = '1.4';
+    consolePane.style.flex = '1';
+    if (typeof updateEditorView === 'function') updateEditorView();
+  });
+
+  // ── Pantalla completa de paneles ────────────────────────────────────────
+  var editorFS = false, consoleFS = false;
+
+  function isMobile() { return window.innerWidth <= 760; }
+
+  function setEditorFS(on) {
+    editorFS = on;
+    editorFSBtn.textContent = on ? '⊡' : '⛶';
+    editorFSBtn.title = on ? 'Restaurar editor (Escape)' : 'Pantalla completa del editor';
+    editorFSBtn.classList.toggle('active', on);
+    if (on) {
+      if (isMobile()) {
+        editorPane.style.flex   = '1 0 100%';
+        consolePane.style.flex  = '0 0 0px';
+        consolePane.style.minHeight = '0';
+        consolePane.style.overflow  = 'hidden';
+      } else {
+        editorPane.style.flex   = '1 0 100%';
+        consolePane.style.flex  = '0 0 0px';
+        consolePane.style.minWidth  = '0';
+        consolePane.style.overflow  = 'hidden';
+      }
+      paneResizer.style.display = 'none';
+    } else {
+      if (isMobile()) {
+        editorPane.style.flex   = '65 1 0';
+        consolePane.style.flex  = '35 1 0';
+        consolePane.style.minHeight = '';
+        consolePane.style.overflow  = '';
+      } else {
+        editorPane.style.flex   = '1.4';
+        consolePane.style.flex  = '1';
+        consolePane.style.minWidth  = '';
+        consolePane.style.overflow  = '';
+        editorPane.style.borderRight = '';
+      }
+      paneResizer.style.display = '';
+    }
+    if (typeof updateEditorView === 'function') updateEditorView();
+  }
+
+  function setConsoleFS(on) {
+    consoleFS = on;
+    consoleFSBtn.textContent = on ? '⊡' : '⛶';
+    consoleFSBtn.title = on ? 'Restaurar consola (Escape)' : 'Pantalla completa de la consola';
+    consoleFSBtn.classList.toggle('active', on);
+    if (on) {
+      if (isMobile()) {
+        consolePane.style.flex  = '1 0 100%';
+        editorPane.style.flex   = '0 0 0px';
+        editorPane.style.minHeight  = '0';
+        editorPane.style.overflow   = 'hidden';
+        editorPane.style.borderBottom = 'none';
+      } else {
+        consolePane.style.flex  = '1 0 100%';
+        editorPane.style.flex   = '0 0 0px';
+        editorPane.style.minWidth   = '0';
+        editorPane.style.overflow   = 'hidden';
+        editorPane.style.borderRight = 'none';
+      }
+      paneResizer.style.display = 'none';
+    } else {
+      if (isMobile()) {
+        consolePane.style.flex  = '35 1 0';
+        editorPane.style.flex   = '65 1 0';
+        editorPane.style.minHeight    = '';
+        editorPane.style.overflow     = '';
+        editorPane.style.borderBottom = '';
+      } else {
+        consolePane.style.flex  = '1';
+        editorPane.style.flex   = '1.4';
+        editorPane.style.minWidth    = '';
+        editorPane.style.overflow    = '';
+        editorPane.style.borderRight = '';
+      }
+      paneResizer.style.display = '';
+    }
+    if (typeof updateEditorView === 'function') updateEditorView();
+  }
+
+  editorFSBtn && editorFSBtn.addEventListener('click', function() {
+    if (consoleFS) setConsoleFS(false);
+    setEditorFS(!editorFS);
+  });
+
+  consoleFSBtn && consoleFSBtn.addEventListener('click', function() {
+    if (editorFS) setEditorFS(false);
+    setConsoleFS(!consoleFS);
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      if (editorFS)  setEditorFS(false);
+      if (consoleFS) setConsoleFS(false);
+    }
+  });
+})();
 </script>
 
 
