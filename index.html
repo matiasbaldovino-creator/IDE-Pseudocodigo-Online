@@ -2142,14 +2142,56 @@ function isBlockLine(text) {
 // También soporta el estilo en el que "Entonces" o "Hacer" aparecen solos
 // en su propia línea, como continuación del encabezado anterior.
 // Cada instrucción es un objeto {text, line}
+// Instrucciones que REQUIEREN punto y coma al final
+function requiresSemicolon(text) {
+  const t = text.trim().toLowerCase();
+  // Instrucciones simples que deben terminar en ;
+  const patterns = [
+    /^escribir\b/i,
+    /^mostrar\b/i,
+    /^leer\b/i,
+    /^definir\b/i,
+    /^dimension\b/i,
+    /^retornar\b/i,
+    /^esperar\b/i,
+    /^limpiar\b/i,
+    /^borrar\b/i,
+    /^[a-záéíóúñ_][\wáéíóúñ]*\s*(<-|\[)/i,  // asignación o arreglo[i] <-
+    /^[a-záéíóúñ_][\wáéíóúñ]*\s*\(/i,        // llamada a subproceso(...)
+  ];
+  // Instrucciones de bloque que NO requieren ;
+  const blockKeywords = [
+    'si ', 'sino', 'finsi', 'para ', 'finpara', 'mientras ', 'finmientras',
+    'repetir', 'hasta que', 'segun ', 'hacer', 'finsegun', 'de otro modo',
+    'subproceso ', 'finsubproceso', 'funcion ', 'finfuncion',
+    'algoritmo ', 'finalgoritmo', 'proceso ', 'finproceso',
+    'entonces', 'retornar '
+  ];
+  for (const kw of blockKeywords) {
+    if (t.startsWith(kw) || t === kw.trim()) return false;
+  }
+  // Caso especial: "Hasta Que ..." (condición del Repetir)
+  if (/^hasta\s+que\b/i.test(t)) return false;
+  // Verificar si matchea algún patrón de instrucción simple
+  for (const pat of patterns) {
+    if (pat.test(t)) return true;
+  }
+  return false;
+}
+
+
 function splitStatements(sourceLines) {
   const statements = [];
   let buffer = '';
   let bufferStartLine = 1;
 
-  function flush() {
+  function flush(fromNewline) {
     const trimmed = buffer.trim();
-    if (trimmed !== '') statements.push({text: trimmed, line: bufferStartLine});
+    if (trimmed !== '') {
+      // Si se flushea por salto de línea (no por ;), marcar si requiere ;
+      const missing = fromNewline ? requiresSemicolon(trimmed) : false;
+      statements.push({text: trimmed, line: bufferStartLine, missingSemicolon: missing});
+    }
     buffer = '';
   }
 
@@ -2157,51 +2199,60 @@ function splitStatements(sourceLines) {
     const line = sourceLines[li];
     const trimmedLine = line.trim();
 
-    // "Entonces" o "Hacer" solos en su propia línea: si el buffer abierto
-    // es un encabezado de Si / Mientras / Para / Segun, se une a él y se
-    // cierra como una sola instrucción de control.
     if (STANDALONE_THEN_RE.test(trimmedLine) && OPEN_SI_RE.test(buffer.trim())) {
       buffer += ' Entonces';
-      flush();
+      flush(false); // bloque de control — no requiere ;
       bufferStartLine = li+2;
       continue;
     }
     if (STANDALONE_DO_RE.test(trimmedLine) && OPEN_HACER_RE.test(buffer.trim())) {
       buffer += ' Hacer';
-      flush();
+      flush(false);
       bufferStartLine = li+2;
       continue;
     }
 
-    // Si la línea completa (trim) es una línea de control de bloque,
-    // primero cerramos lo que haya en el buffer y luego la línea entera
-    // se convierte en su propia instrucción.
     if (isBlockLine(line)) {
-      flush();
-      statements.push({text: trimmedLine, line: li+1});
+      flush(true); // flush lo que había acumulado antes
+      statements.push({text: trimmedLine, line: li+1, missingSemicolon: false});
       bufferStartLine = li+2;
       continue;
     }
 
     let inStr = false;
     if (buffer.trim() === '') bufferStartLine = li+1;
+    let foundSemicolon = false;
     for (let i=0; i<line.length; i++) {
       const ch = line[i];
       if (ch === '"') inStr = !inStr;
       if (!inStr && ch === ';') {
         const trimmed = buffer.trim();
-        if (trimmed !== '') statements.push({text: trimmed, line: bufferStartLine});
+        if (trimmed !== '') statements.push({text: trimmed, line: bufferStartLine, missingSemicolon: false});
         buffer = '';
         bufferStartLine = li+1;
+        foundSemicolon = true;
         continue;
       }
       buffer += ch;
     }
-    buffer += '\n';
+    // Si la línea no tuvo ; y el buffer tiene contenido de instrucción simple,
+    // emitirlo ahora como statement sin ;
+    const bufTrimmed = buffer.trim();
+    if (!foundSemicolon && bufTrimmed !== '' && requiresSemicolon(bufTrimmed)) {
+      statements.push({text: bufTrimmed, line: bufferStartLine, missingSemicolon: true});
+      buffer = '';
+      bufferStartLine = li+2;
+    } else {
+      buffer += '\n';
+    }
   }
   const rest = buffer.trim();
   if (rest !== '') {
-    statements.push({text: rest, line: bufferStartLine});
+    statements.push({
+      text: rest,
+      line: bufferStartLine,
+      missingSemicolon: requiresSemicolon(rest)
+    });
   }
   return statements;
 }
@@ -2509,6 +2560,19 @@ function parseProgram(sourceText) {
 
         for (const term of terminators) {
           if (term.regex.test(text)) return nodes;
+        }
+
+        // Verificar ; obligatorio
+        if (stmt.missingSemicolon) {
+          pos++;
+          nodes.push({
+            type: 'unknown', text: stmt.text, line: stmt.line,
+            hint: [
+              `Falta el punto y coma ";" al final de la instrucción.`,
+              `Corrección: ${stmt.text.trim()};`
+            ]
+          });
+          continue;
         }
 
         let m;
