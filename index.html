@@ -494,31 +494,7 @@
   .donate-card-share { cursor: pointer; }
   .donate-card-arrow.copied { color: var(--run-color-hover) !important; font-size: 12px; }
 
-  /* Mercado Pago card rows */
-  .donate-card-mp { align-items: flex-start; cursor: default; }
-  .donate-card-mp:hover { transform: none; border-color: rgba(0,177,80,0.4); background: rgba(0,177,80,0.05); }
-  .mp-row {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 12px;
-  }
-  .mp-label {
-    color: var(--text-dim);
-    min-width: 70px;
-    flex-shrink: 0;
-  }
-  .mp-value { color: var(--text-main); font-family: 'Cascadia Code','Consolas',monospace; }
-  .mp-account { letter-spacing: 0.5px; }
-  .mp-copy-btn {
-    font-family: inherit; font-size: 11px;
-    padding: 2px 8px;
-    background: rgba(0,177,80,0.12);
-    border: 1px solid rgba(0,177,80,0.3);
-    color: #00b150;
-    border-radius: 4px; cursor: pointer;
-    transition: all 0.15s; flex-shrink: 0;
-  }
-  .mp-copy-btn:hover { background: rgba(0,177,80,0.22); }
-  .mp-copy-btn.copied { background: rgba(0,177,80,0.25); }
+  /* Mercado Pago — ahora usa link directo */
 
   /* Contact section */
   .donate-contact {
@@ -875,9 +851,8 @@
   .file-item {
     display: flex;
     align-items: center;
-    gap: 0;
     padding: 0 4px 0 10px;
-    height: 30px;
+    height: 34px;
     cursor: pointer;
     border-radius: 4px;
     margin: 1px 4px;
@@ -885,22 +860,39 @@
     color: #ccc;
     white-space: nowrap;
     overflow: hidden;
+    gap: 4px;
   }
   .file-item:hover { background: #2a2d2e; }
   .file-item.active { background: #094771; color: #fff; }
-  .file-item .file-icon { margin-right: 6px; font-size: 13px; opacity: 0.7; flex-shrink: 0; }
-  .file-item .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-  .file-item .file-del {
-    opacity: 0;
-    color: #888;
-    font-size: 14px;
-    padding: 2px 5px;
-    border-radius: 3px;
+  .file-item .file-icon { font-size: 13px; opacity: 0.7; flex-shrink: 0; }
+  .file-item .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .file-item .file-actions {
+    display: flex; align-items: center; gap: 2px;
     flex-shrink: 0;
-    transition: opacity 0.1s;
   }
-  .file-item:hover .file-del { opacity: 1; }
-  .file-item .file-del:hover { color: var(--error); background: rgba(244,135,113,0.15); }
+  .file-item .file-btn {
+    background: transparent;
+    border: none;
+    color: #666;
+    font-size: 12px;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.12s, background 0.12s;
+    padding: 0;
+    line-height: 1;
+  }
+  .file-item .file-btn:hover { background: rgba(255,255,255,0.08); color: #ccc; }
+  .file-item .file-btn.rename:hover   { color: #e5c07b; background: rgba(229,192,123,0.15); }
+  .file-item .file-btn.duplicate:hover { color: #569cd6; background: rgba(86,156,214,0.15); }
+  .file-item .file-btn.del:hover      { color: #f48771; background: rgba(244,135,113,0.15); }
+  body.light .file-item { color: #333; }
+  body.light .file-item:hover { background: #e5e5e5; }
+  body.light .file-item.active { background: #cce5ff; color: #003f7f; }
+  body.light .file-item .file-btn { color: #aaa; }
+  body.light .file-item .file-btn:hover { background: rgba(0,0,0,0.08); color: #333; }
 
   .files-actions {
     padding: 8px;
@@ -1068,6 +1060,37 @@
   }
   .pane-fullscreen-btn:hover { background: var(--border); color: var(--text-main); }
   .pane-fullscreen-btn.active { color: var(--accent); background: rgba(86,156,214,0.12); }
+  /* Indicador de cambios sin guardar */
+  .dirty-dot {
+    color: #e5c07b;
+    font-size: 14px;
+    margin-right: 4px;
+    line-height: 1;
+  }
+  /* Toggle de autoguardado dentro del panel de archivos */
+  .files-actions-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+  .autosave-toggle {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; color: var(--text-dim);
+    cursor: pointer; flex-shrink: 0;
+    padding: 6px 10px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+    user-select: none;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .autosave-toggle:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+  .autosave-toggle input[type=checkbox] { cursor: pointer; accent-color: var(--accent); width: 14px; height: 14px; flex-shrink: 0; }
+  .autosave-toggle.active { color: var(--accent); }
+  body.light .autosave-toggle { color: #666; }
+  body.light .autosave-toggle:hover { color: #333; background: rgba(0,0,0,0.04); }
+  body.light .autosave-toggle.active { color: var(--accent); }
+
   #currentFileName {
     text-transform: none;
     letter-spacing: 0;
@@ -1540,12 +1563,16 @@
         <button id="exportBtn">⬇ Exportar como .psc</button>
         <button id="importBtn">⬆ Importar archivo .psc</button>
         <input type="file" id="importInput" accept=".psc,.txt,.pseudo" style="display:none">
+        <div class="files-actions-divider"></div>
+        <label class="autosave-toggle" id="autosaveToggle" title="Guardar automáticamente al ejecutar">
+          <input type="checkbox" id="autosaveCheck"> Autoguardado al ejecutar
+        </label>
       </div>
     </div>
 
     <div class="editor-pane" id="editorPane">
       <div class="pane-header">
-        <div class="pane-header-left"><span>Editor — <span id="currentFileName">sin título</span></span></div>
+        <div class="pane-header-left"><span>Editor — <span id="dirtyDot" class="dirty-dot" style="display:none" title="Cambios sin guardar">●</span><span id="currentFileName">sin título</span></span></div>
         <div class="pane-header-right">
           <span id="lineCount">0 líneas</span>
           <button class="pane-fullscreen-btn" id="editorFullscreenBtn" title="Pantalla completa del editor">⛶</button>
@@ -1618,6 +1645,33 @@
     <div class="modal-btns">
       <button class="btn-cancel" id="modalCancel">Cancelar</button>
       <button class="btn-ok" id="modalOk">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de cambios sin guardar -->
+<div class="modal-overlay" id="unsavedOverlay">
+  <div class="modal">
+    <h3 id="unsavedTitle">Cambios sin guardar</h3>
+    <p id="unsavedMsg" style="color:var(--text-dim);font-size:13px;margin:0 0 16px;line-height:1.5;"></p>
+    <div class="modal-btns" style="justify-content:space-between;">
+      <button class="btn-cancel" id="unsavedDiscard" style="color:#f48771;">Descartar</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-cancel" id="unsavedCancel">Cancelar</button>
+        <button class="btn-ok" id="unsavedSave">Guardar y continuar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmación (eliminar, etc.) -->
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal">
+    <h3 id="confirmTitle">¿Confirmás?</h3>
+    <p id="confirmMsg" style="color:var(--text-dim);font-size:13px;margin:0 0 16px;line-height:1.5;"></p>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="confirmCancel">Cancelar</button>
+      <button class="btn-ok" id="confirmOk" style="background:#c0392b;">Eliminar</button>
     </div>
   </div>
 </div>
@@ -2487,12 +2541,34 @@ function parseProgram(sourceText) {
   const subDefs = {};  // nombre → { params, body (AST), isFunc, returnVar }
 
   // Encontrar el bloque principal Proceso/Algoritmo
-  let mainStart = 0, mainEnd = statements.length;
+  let mainStart = -1, mainEnd = -1;
   for (let i=0;i<statements.length;i++){
     if (RE.proceso.test(statements[i].text)) { mainStart = i+1; break; }
   }
   for (let i=statements.length-1;i>=0;i--){
     if (RE.finproceso.test(statements[i].text)) { mainEnd = i; break; }
+  }
+
+  // Validar que existen ambos delimitadores
+  if (mainStart === -1) {
+    throw new PseudoError(
+      'Falta la instrucción "Algoritmo NombreDelPrograma" al inicio.',
+      1,
+      [
+        'Todo programa debe comenzar con: Algoritmo NombreDelPrograma',
+        'Ejemplo: Algoritmo MiPrograma',
+      ]
+    );
+  }
+  if (mainEnd === -1) {
+    throw new PseudoError(
+      'Falta la instrucción "FinAlgoritmo" al final del programa.',
+      statements[statements.length-1]?.line || 1,
+      [
+        'Todo programa debe terminar con: FinAlgoritmo',
+        '¿Olvidaste cerrar el bloque principal?',
+      ]
+    );
   }
 
   // Extraer definiciones de SubProceso/Funcion que estén FUERA o DENTRO
@@ -2508,26 +2584,44 @@ function parseProgram(sourceText) {
       if ((m = RE.subproceso.exec(text))) {
         const name = m[2].trim();
         const params = parseParams(m[3]);
+        const defLine = stmts[i].line;
         i++;
         const body = [];
         while (i < stmts.length && !RE.finsubproceso.test(stmts[i].text.trim())) {
           body.push(stmts[i]); i++;
         }
-        if (i < stmts.length) i++; // consume FinSubProceso
+        if (i < stmts.length) {
+          i++; // consume FinSubProceso
+        } else {
+          throw new PseudoError(
+            `Falta "FinSubProceso" para cerrar el SubProceso "${name}" de la línea ${defLine}.`,
+            defLine,
+            [`Todo SubProceso debe cerrarse con "FinSubProceso".`]
+          );
+        }
         subDefs[name.toLowerCase()] = { name, params, rawBody: body, isFunc: false, returnVar: null };
         continue;
       }
 
       if ((m = RE.funcion.exec(text))) {
-        const returnVar = m[2].trim();  // ej: "resultado"
-        const name = m[3].trim();       // ej: "Cuadrado"
+        const returnVar = m[2].trim();
+        const name = m[3].trim();
         const params = parseParams(m[4]);
+        const defLine = stmts[i].line;
         i++;
         const body = [];
         while (i < stmts.length && !RE.finfuncion.test(stmts[i].text.trim())) {
           body.push(stmts[i]); i++;
         }
-        if (i < stmts.length) i++; // consume FinFuncion
+        if (i < stmts.length) {
+          i++; // consume FinFuncion
+        } else {
+          throw new PseudoError(
+            `Falta "FinFuncion" para cerrar la Funcion "${name}" de la línea ${defLine}.`,
+            defLine,
+            [`Toda Funcion debe cerrarse con "FinFuncion".`]
+          );
+        }
         subDefs[name.toLowerCase()] = { name, params, rawBody: body, isFunc: true, returnVar };
         continue;
       }
@@ -2606,7 +2700,21 @@ function parseProgram(sourceText) {
             }
           }
           // Consumir FinSi si viene a continuación
-          if (pos < body.length && RE.finsi.test(body[pos].text.trim())) pos++;
+          if (pos < body.length && RE.finsi.test(body[pos].text.trim())) {
+            pos++;
+          } else if (!siCompactoMatch) {
+            throw new PseudoError(
+              `Falta "FinSi" para cerrar el bloque "Si" de la línea ${stmt.line}.`,
+              stmt.line,
+              [
+                'Todo bloque "Si...Entonces" debe cerrarse con "FinSi".',
+                'Ejemplo correcto:',
+                '    Si condición Entonces',
+                '        instrucción;',
+                '    FinSi',
+              ]
+            );
+          }
           nodes.push({type:'if', cond: condExpr, thenBody: thenAst, elseBody: elseAst, line: stmt.line});
           continue;
         }
@@ -2624,20 +2732,43 @@ function parseProgram(sourceText) {
           let elseBody = [];
           // ¿Sigue un Sino-Si (else-if encadenado)?
           if (pos < body.length && RE.sinoSi.test(body[pos].text.trim())) {
-            // Construir el else-if como un nodo Si anidado en elseBody,
-            // re-insertando el Sino-Si como Si normal para que parseBlock lo procese.
-            const sinoSiText = body[pos].text.trim();
-            const sinoSiMatch = RE.sinoSi.exec(sinoSiText);
-            // Reemplazar el statement actual por un "Si <cond> Entonces" normal
-            body[pos] = { text: 'Si ' + sinoSiMatch[2].trim() + ' Entonces', line: body[pos].line };
-            // No consumimos pos — el parseBlock lo procesará como Si normal
-            elseBody = parseBlock([{name:'finsi', regex:RE.finsi}]);
-            // FinSi ya lo consumirá el parseBlock interno si es necesario
+            // Construir el else-if recursivamente SIN reescribir el statement
+            // para no disparar el check de FinSi en el Si interno
+            const sinoSiMatch = RE.sinoSi.exec(body[pos].text.trim());
+            const sinoSiLine  = body[pos].line;
+            pos++; // consumir el Sino-Si
+            const sinoSiThen = parseBlock([
+              {name:'sinoSi', regex:RE.sinoSi},
+              {name:'sino',   regex:RE.sino},
+              {name:'finsi',  regex:RE.finsi}
+            ]);
+            let sinoSiElse = [];
+            if (pos < body.length && RE.sinoSi.test(body[pos].text.trim())) {
+              // Otro Sino-Si encadenado — re-parsear desde aquí
+              body[pos] = { text: 'Si ' + RE.sinoSi.exec(body[pos].text.trim())[2].trim() + ' Entonces', line: body[pos].line, _sinoSiChain: true };
+              sinoSiElse = parseBlock([{name:'finsi', regex:RE.finsi}]);
+            } else if (pos < body.length && RE.sino.test(body[pos].text.trim())) {
+              pos++;
+              sinoSiElse = parseBlock([{name:'finsi', regex:RE.finsi}]);
+            }
+            elseBody = [{type:'if', cond: sinoSiMatch[2].trim(), thenBody: sinoSiThen, elseBody: sinoSiElse, line: sinoSiLine}];
           } else if (pos < body.length && RE.sino.test(body[pos].text.trim())) {
             pos++;
             elseBody = parseBlock([{name:'finsi',regex:RE.finsi}]);
           }
-          if (pos < body.length && RE.finsi.test(body[pos].text.trim())) pos++;
+          // Consumir FinSi — es obligatorio a menos que estemos en una cadena Sino-Si
+          if (pos < body.length && RE.finsi.test(body[pos].text.trim())) {
+            pos++;
+          } else if (!stmt._sinoSiChain) {
+            throw new PseudoError(
+              `Falta "FinSi" para cerrar el bloque "Si" de la línea ${stmt.line}.`,
+              stmt.line,
+              [
+                'Todo bloque "Si...Entonces" debe cerrarse con "FinSi".',
+                'Ejemplo: Si condición Entonces ... FinSi',
+              ]
+            );
+          }
           nodes.push({type:'if', cond:condExpr, thenBody, elseBody, line:stmt.line});
           continue;
         }
@@ -2646,7 +2777,15 @@ function parseProgram(sourceText) {
         if ((m = RE.mientras.exec(text))) {
           pos++;
           const whileBody = parseBlock([{name:'finmientras',regex:RE.finmientras}]);
-          if (pos < body.length && RE.finmientras.test(body[pos].text.trim())) pos++;
+          if (pos < body.length && RE.finmientras.test(body[pos].text.trim())) {
+            pos++;
+          } else {
+            throw new PseudoError(
+              `Falta "FinMientras" para cerrar el bloque "Mientras" de la línea ${stmt.line}.`,
+              stmt.line,
+              ['Todo bloque "Mientras...Hacer" debe cerrarse con "FinMientras".']
+            );
+          }
           nodes.push({type:'while', cond:m[1].trim(), body:whileBody, line:stmt.line});
           continue;
         }
@@ -2656,9 +2795,15 @@ function parseProgram(sourceText) {
           pos++;
           const repBody = parseBlock([{name:'hastaque',regex:RE.hastaQue}]);
           let condExpr = '';
-          if (pos < body.length) {
+          if (pos < body.length && RE.hastaQue.test(body[pos].text.trim())) {
             const hm = RE.hastaQue.exec(body[pos].text.trim());
             if (hm) { condExpr = hm[1].trim().replace(/;+$/, ''); pos++; }
+          } else {
+            throw new PseudoError(
+              `Falta "Hasta Que <condición>;" para cerrar el bloque "Repetir" de la línea ${stmt.line}.`,
+              stmt.line,
+              ['Todo bloque "Repetir" debe cerrarse con "Hasta Que <condición>;".']
+            );
           }
           nodes.push({type:'repeat', cond:condExpr, body:repBody, line:stmt.line});
           continue;
@@ -2668,7 +2813,15 @@ function parseProgram(sourceText) {
         if ((m = RE.para.exec(text))) {
           pos++;
           const forBody = parseBlock([{name:'finpara',regex:RE.finpara}]);
-          if (pos < body.length && RE.finpara.test(body[pos].text.trim())) pos++;
+          if (pos < body.length && RE.finpara.test(body[pos].text.trim())) {
+            pos++;
+          } else {
+            throw new PseudoError(
+              `Falta "FinPara" para cerrar el bloque "Para" de la línea ${stmt.line}.`,
+              stmt.line,
+              ['Todo bloque "Para...Hacer" debe cerrarse con "FinPara".']
+            );
+          }
           nodes.push({type:'for', varName:m[1].trim(), fromExpr:m[2].trim(),
             toExpr:m[3].trim(), stepExpr:m[4]?m[4].trim():'1', body:forBody, line:stmt.line});
           continue;
@@ -2698,7 +2851,15 @@ function parseProgram(sourceText) {
               } else { pos++; }
             }
           }
-          if (pos < body.length && RE.finsegun.test(body[pos].text.trim())) pos++;
+          if (pos < body.length && RE.finsegun.test(body[pos].text.trim())) {
+            pos++;
+          } else {
+            throw new PseudoError(
+              `Falta "FinSegun" para cerrar el bloque "Segun" de la línea ${stmt.line}.`,
+              stmt.line,
+              ['Todo bloque "Segun...Hacer" debe cerrarse con "FinSegun".']
+            );
+          }
           nodes.push({type:'switch', varExpr, cases, defaultBody, line:stmt.line});
           continue;
         }
@@ -3145,10 +3306,14 @@ function formatValue(val) {
   if (typeof val === 'boolean') return val ? 'Verdadero' : 'Falso';
   if (typeof val === 'number') {
     if (Number.isInteger(val)) return String(val);
-    // limitar decimales para evitar errores de punto flotante
     return String(Math.round(val * 1e10) / 1e10);
   }
   if (val === undefined || val === null) return '';
+  // Arreglo PSeInt: los índices arrancan en 1, el [0] es siempre 0 (relleno interno)
+  if (Array.isArray(val)) {
+    const elements = val.slice(1).map(v => formatValue(v));
+    return '[' + elements.join(', ') + ']';
+  }
   return String(val);
 }
 
@@ -3823,6 +3988,11 @@ async function runInterpreter({ mainAst, subDefs }) {
    ========================================================================= */
 
 async function runProgram() {
+  // Autoguardado al ejecutar si está activado y hay archivo con nombre
+  if (autosaveCheck?.checked && currentFileId && isDirty) {
+    const file = getFile(currentFileId);
+    if (file) doSave(file.name, currentFileId);
+  }
   clearConsole();
   stopSignal = { cancelled: false };
   setStatus('Ejecutando…', false);
@@ -3835,7 +4005,6 @@ async function runProgram() {
   const source = codeInput.value;
   try {
     if (!/proceso|algoritmo/i.test(source)) {
-      writeLine('Advertencia: no se encontró "Proceso" / "FinProceso". Se intentará ejecutar el contenido.', 'line-info');
     }
     const ast = parseProgram(source);
     await runInterpreter(ast);
@@ -4009,8 +4178,10 @@ tabla[1, 2] <- 42;`
       {
         name: 'Si / Entonces / Sino / FinSi',
         badge: 'control',
-        desc: 'Ejecuta un bloque si la condición es verdadera, y opcionalmente otro si es falsa.',
-        example: `Si edad >= 18 Entonces
+        desc: 'Ejecuta un bloque si la condición es verdadera, y opcionalmente otro si es falsa. El "FinSi" es OBLIGATORIO — sin él el programa dará error.',
+        example: `Definir edad Como Entero;
+edad <- 20;
+Si edad >= 18 Entonces
     Escribir "Mayor de edad";
 Sino
     Escribir "Menor de edad";
@@ -4019,8 +4190,10 @@ FinSi`
       {
         name: 'Sino-Si (else if encadenado)',
         badge: 'control',
-        desc: 'Permite encadenar múltiples condiciones. Equivale a Sino + Si anidados.',
-        example: `Si nota >= 90 Entonces
+        desc: 'Permite encadenar múltiples condiciones. Equivale a Sino + Si anidados. El "FinSi" cierra toda la cadena — solo se escribe uno al final.',
+        example: `Definir nota Como Entero;
+nota <- 75;
+Si nota >= 90 Entonces
     Escribir "Sobresaliente";
 Sino-Si nota >= 70 Entonces
     Escribir "Aprobado";
@@ -4039,7 +4212,8 @@ FinSi`
     2: Escribir "Martes";
     3: Escribir "Miércoles";
     4, 5: Escribir "Jueves o Viernes";
-    De Otro Modo: Escribir "Fin de semana";
+    De Otro Modo:
+        Escribir "Fin de semana";
 FinSegun`
       },
     ]
@@ -4662,11 +4836,88 @@ function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
+// ── Sistema de cambios sin guardar (dirty tracking) ──────────────────────
+
+const dirtyDot      = document.getElementById('dirtyDot');
+const autosaveCheck = document.getElementById('autosaveCheck');
+const autosaveToggle = document.getElementById('autosaveToggle');
+const unsavedOverlay = document.getElementById('unsavedOverlay');
+const unsavedMsg    = document.getElementById('unsavedMsg');
+const unsavedSave   = document.getElementById('unsavedSave');
+const unsavedDiscard = document.getElementById('unsavedDiscard');
+const unsavedCancel = document.getElementById('unsavedCancel');
+
+let isDirty = false;
+let unsavedCallback = null;
+
+// Cargar estado del toggle desde localStorage
+autosaveCheck.checked = localStorage.getItem('psc_autosave') !== 'false';
+autosaveToggle.classList.toggle('active', autosaveCheck.checked);
+
+autosaveCheck.addEventListener('change', () => {
+  localStorage.setItem('psc_autosave', autosaveCheck.checked);
+  autosaveToggle.classList.toggle('active', autosaveCheck.checked);
+  setStatus(autosaveCheck.checked ? 'Autoguardado activado.' : 'Autoguardado desactivado.', false);
+});
+
+function setDirty(dirty) {
+  isDirty = dirty;
+  dirtyDot.style.display = dirty ? 'inline' : 'none';
+}
+
+// Marcar como sucio cada vez que se edita
+codeInput.addEventListener('input', () => {
+  if (currentFileId) setDirty(true);
+});
+
+// Modal de cambios sin guardar
+function openUnsaved(filename, onSave, onDiscard) {
+  unsavedMsg.textContent = `"${filename}" tiene cambios sin guardar. ¿Qué querés hacer?`;
+  unsavedCallback = { onSave, onDiscard };
+  unsavedOverlay.classList.add('open');
+}
+function closeUnsaved() {
+  unsavedOverlay.classList.remove('open');
+  unsavedCallback = null;
+}
+
+unsavedSave.addEventListener('click', () => {
+  const cb = unsavedCallback;
+  closeUnsaved();
+  if (cb?.onSave) cb.onSave();
+});
+unsavedDiscard.addEventListener('click', () => {
+  const cb = unsavedCallback;
+  closeUnsaved();
+  if (cb?.onDiscard) cb.onDiscard();
+});
+unsavedCancel.addEventListener('click', closeUnsaved);
+unsavedOverlay.addEventListener('click', e => { if (e.target === unsavedOverlay) closeUnsaved(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && unsavedOverlay.classList.contains('open')) closeUnsaved();
+});
+
+// Interceptar openFile para verificar cambios pendientes
+const _origOpenFile = openFile;
+window.openFile = function(id) {
+  if (isDirty && currentFileId) {
+    const file = getFile(currentFileId);
+    const name = file?.name || 'sin título';
+    openUnsaved(
+      name,
+      () => { saveCurrentFile(); _origOpenFile(id); },  // Guardar y abrir
+      () => { setDirty(false); _origOpenFile(id); }     // Descartar y abrir
+    );
+  } else {
+    _origOpenFile(id);
+  }
+};
+
 // ── Render de la lista ────────────────────────────────────────────────────
 
 function renderFilesList() {
   filesList.innerHTML = '';
-  const ids = getIndex();
+  const ids = getIndex(); // array de strings (IDs)
   if (ids.length === 0) {
     const empty = document.createElement('div');
     empty.style.cssText = 'padding:14px 12px;color:#555;font-size:12px;';
@@ -4677,39 +4928,112 @@ function renderFilesList() {
   ids.forEach(id => {
     const file = getFile(id);
     if (!file) return;
+
     const item = document.createElement('div');
     item.className = 'file-item' + (id === currentFileId ? ' active' : '');
     item.dataset.id = id;
 
+    // Icono + nombre (click abre el archivo)
     const icon = document.createElement('span');
     icon.className = 'file-icon';
     icon.textContent = '📄';
 
-    const name = document.createElement('span');
-    name.className = 'file-name';
-    name.textContent = file.name;
-    name.title = file.name + '\n' + new Date(file.savedAt).toLocaleString();
+    const nameEl = document.createElement('span');
+    nameEl.className = 'file-name';
+    nameEl.textContent = file.name;
+    nameEl.title = file.name + '\n' + new Date(file.savedAt).toLocaleString();
 
-    const del = document.createElement('span');
-    del.className = 'file-del';
-    del.textContent = '✕';
-    del.title = 'Eliminar';
-    del.addEventListener('click', e => {
+    // Botones de acción — siempre visibles, tamaño táctil adecuado
+    const actions = document.createElement('span');
+    actions.className = 'file-actions';
+
+    // ── Renombrar ──
+    const renBtn = document.createElement('button');
+    renBtn.className = 'file-btn rename';
+    renBtn.textContent = '✏️';
+    renBtn.title = 'Renombrar';
+    renBtn.addEventListener('click', e => {
       e.stopPropagation();
-      if (confirm(`¿Eliminar "${file.name}"?`)) {
-        deleteFile(id);
-        if (currentFileId === id) {
-          currentFileId = null;
-          currentFileNameEl.textContent = 'sin título';
+      const currentName = file.name.replace(/\.psc$/i, '');
+      openModal(`Renombrar "${file.name}"`, currentName, newName => {
+        if (!newName || !newName.trim()) return;
+        const finalName = newName.trim().replace(/\.psc$/i, '') + '.psc';
+        const allIds = getIndex();
+        const nameExists = allIds.some(oid => {
+          if (oid === id) return false;
+          const f = getFile(oid);
+          return f && f.name.toLowerCase() === finalName.toLowerCase();
+        });
+        if (nameExists) {
+          openConfirm('Nombre duplicado', `Ya existe un archivo llamado "${finalName}".`, 'OK', () => {});
+          return;
         }
+        putFile(id, { ...file, name: finalName });
+        if (currentFileId === id) currentFileNameEl.textContent = finalName;
         renderFilesList();
-        setStatus(`"${file.name}" eliminado.`, false);
-      }
+        setStatus(`Renombrado a "${finalName}".`, false);
+      });
+      // Pre-rellenar el input con el nombre actual
+      setTimeout(() => {
+        modalInput.value = currentName;
+        modalInput.select();
+        modalOk.textContent = 'Renombrar';
+      }, 10);
     });
 
+    // ── Duplicar ──
+    const dupBtn = document.createElement('button');
+    dupBtn.className = 'file-btn duplicate';
+    dupBtn.textContent = '⧉';
+    dupBtn.title = 'Duplicar';
+    dupBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const baseName = file.name.replace(/\.psc$/i, '');
+      const allIds = getIndex();
+      // Generar nombre único
+      let newName = `Copia de ${baseName}.psc`;
+      let n = 2;
+      while (allIds.some(oid => { const f = getFile(oid); return f && f.name.toLowerCase() === newName.toLowerCase(); })) {
+        newName = `${baseName} (${n++}).psc`;
+      }
+      const newId = genId();
+      putFile(newId, { ...file, name: newName, savedAt: Date.now() });
+      allIds.push(newId);
+      saveIndex(allIds);
+      renderFilesList();
+      setStatus(`Duplicado como "${newName}".`, false);
+    });
+
+    // ── Eliminar ──
+    const delBtn = document.createElement('button');
+    delBtn.className = 'file-btn del';
+    delBtn.textContent = '✕';
+    delBtn.title = 'Eliminar';
+    delBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      openConfirm(
+        'Eliminar archivo',
+        `¿Eliminás "${file.name}"? Esta acción no se puede deshacer.`,
+        'Eliminar',
+        () => {
+          deleteFile(id);
+          if (currentFileId === id) {
+            currentFileId = null;
+            currentFileNameEl.textContent = 'sin título';
+          }
+          renderFilesList();
+          setStatus(`"${file.name}" eliminado.`, false);
+        }
+      );
+    });
+
+    actions.appendChild(renBtn);
+    actions.appendChild(dupBtn);
+    actions.appendChild(delBtn);
+
     item.appendChild(icon);
-    item.appendChild(name);
-    item.appendChild(del);
+    item.appendChild(nameEl);
+    item.appendChild(actions);
     item.addEventListener('click', () => openFile(id));
     filesList.appendChild(item);
   });
@@ -4723,6 +5047,7 @@ function openFile(id) {
   codeInput.value = file.code;
   currentFileId = id;
   currentFileNameEl.textContent = file.name;
+  setDirty(false);
   updateEditorView();
   renderFilesList();
   setStatus(`"${file.name}" abierto.`, false);
@@ -4742,6 +5067,7 @@ function doSave(name, id) {
   }
   currentFileId = id;
   currentFileNameEl.textContent = name;
+  setDirty(false);
   renderFilesList();
   setStatus(`"${name}" guardado correctamente.`, false);
 }
@@ -4813,6 +5139,36 @@ function openModal(title, placeholder, onOk) {
   modalOverlay.classList.add('open');
   setTimeout(() => modalInput.focus(), 50);
 }
+
+// Modal de confirmación genérico
+const confirmOverlay = document.getElementById('confirmOverlay');
+const confirmTitle   = document.getElementById('confirmTitle');
+const confirmMsg     = document.getElementById('confirmMsg');
+const confirmOk      = document.getElementById('confirmOk');
+const confirmCancel  = document.getElementById('confirmCancel');
+let confirmCallback  = null;
+
+function openConfirm(title, msg, okLabel, onOk) {
+  confirmTitle.textContent  = title;
+  confirmMsg.textContent    = msg;
+  confirmOk.textContent     = okLabel || 'Confirmar';
+  confirmCallback = onOk;
+  confirmOverlay.classList.add('open');
+}
+function closeConfirm() {
+  confirmOverlay.classList.remove('open');
+  confirmCallback = null;
+}
+confirmOk.addEventListener('click', () => {
+  const cb = confirmCallback;
+  closeConfirm();
+  if (cb) cb();
+});
+confirmCancel.addEventListener('click', closeConfirm);
+confirmOverlay.addEventListener('click', e => { if (e.target === confirmOverlay) closeConfirm(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && confirmOverlay.classList.contains('open')) closeConfirm();
+});
 function closeModal() {
   modalOverlay.classList.remove('open');
   modalCallback = null;
@@ -5015,7 +5371,8 @@ FinAlgoritmo`,
 <ul>
   <li>Operadores: <code>&gt;</code> <code>&lt;</code> <code>=</code> <code>&gt;=</code> <code>&lt;=</code> <code>&lt;&gt;</code></li>
   <li>La condición va entre <code>Si</code> y <code>Entonces</code></li>
-  <li>El bloque cierra con <code>FinSi</code></li>
+  <li>El bloque cierra con <code>FinSi</code> — es <strong>obligatorio</strong>, sin él el programa da error</li>
+  <li><code>Sino</code> es opcional y va entre el cuerpo y el <code>FinSi</code></li>
 </ul>`,
         example:`Algoritmo EjemploSi
     Definir n Como Entero;
@@ -6390,27 +6747,14 @@ document.addEventListener('keydown', e => { if (e.key==='Escape' && learnOverlay
         </a>
 
         <!-- Mercado Pago Uruguay -->
-        <div class="donate-card donate-card-mp">
+        <a class="donate-card" href="https://link.mercadopago.com.uy/matiasbaldovino" target="_blank" rel="noopener">
           <span class="donate-card-icon">💚</span>
           <div class="donate-card-info">
             <div class="donate-card-name">Mercado Pago <span style="font-size:11px;color:var(--text-dim);font-weight:400">· Uruguay · UYU</span></div>
-            <div class="donate-card-desc" style="margin-top:8px;display:flex;flex-direction:column;gap:5px;">
-              <div class="mp-row">
-                <span class="mp-label">Titular</span>
-                <span class="mp-value">Matias Gabriel Baldovino Ramirez</span>
-              </div>
-              <div class="mp-row">
-                <span class="mp-label">N° cuenta</span>
-                <span class="mp-value mp-account" id="mpAccount">1006325724165</span>
-                <button class="mp-copy-btn" id="mpCopyBtn" title="Copiar número de cuenta">Copiar</button>
-              </div>
-              <div class="mp-row">
-                <span class="mp-label">Institución</span>
-                <span class="mp-value">Mercado Pago</span>
-              </div>
-            </div>
+            <div class="donate-card-desc">Pagá con tarjeta o saldo Mercado Pago — rápido y sin complicaciones</div>
           </div>
-        </div>
+          <span class="donate-card-arrow">→</span>
+        </a>
 
         <!-- Compartir -->
         <div class="donate-card donate-card-share">
@@ -6450,7 +6794,6 @@ document.addEventListener('keydown', e => { if (e.key==='Escape' && learnOverlay
   var donateBtnEl    = document.getElementById('donateBtn');
   var donateCloseEl  = document.getElementById('donateClose');
   var donateShareEl  = document.getElementById('donateShareBtn');
-  var mpCopyEl       = document.getElementById('mpCopyBtn');
   var contactCopyEl  = document.getElementById('contactCopyBtn');
 
   if (!donateOverlay || !donateBtnEl) return;
@@ -6486,7 +6829,6 @@ document.addEventListener('keydown', e => { if (e.key==='Escape' && learnOverlay
   }
 
   makeCopyBtn(donateShareEl, window.location.href,       'Copiar link');
-  makeCopyBtn(mpCopyEl,      '1006325724165',             'Copiar');
   makeCopyBtn(contactCopyEl, 'matiasbaldovino@gmail.com', 'Copiar');
 })();
 </script>
