@@ -34,7 +34,10 @@ Como proyecto personal e independiente, desarrollé esta solución basada en tre
 * 🔒 **Privacidad garantizada:** Todo el código vive y se ejecuta localmente en tu navegador.
 
 ---
+## 📝 Accede al IDE
+[Acceder desde aquí](https://matiasbaldovino-creator.github.io/IDE-Pseudocodigo-Online/)
 
+---
 ## ☕ Apoya el Proyecto
 
 Este software es y seguirá siendo **completamente gratuito y de código abierto**. Si la herramienta te sirvió para tus clases, tus estudios o te salvó en algún examen, ¡tu apoyo me ayuda muchísimo a mantener el desarrollo activo e implementar nuevas funciones!
