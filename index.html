@@ -1177,6 +1177,9 @@
     box-sizing: border-box;
     letter-spacing: 0;
     word-spacing: 0;
+    tab-size: 4;
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
     -webkit-text-size-adjust: none;
     text-size-adjust: none;
     font-kerning: none;
@@ -1846,8 +1849,13 @@ const kwPattern = new RegExp('\\b(' + KEYWORDS.map(k=>k.replace(/[.*+?^${}()|[\]
 const fnPattern = new RegExp('\\b(' + FUNCS.join('|') + ')\\s*(?=\\()','gi');
 
 function highlightLine(line) {
+  // Convertir tabs a 4 espacios para que el highlight layer
+  // se alinee exactamente con la textarea en todos los browsers/dispositivos.
+  // La textarea muestra tabs según tab-size CSS, pero el innerHTML del
+  // highlight layer puede renderizarlos diferente — especialmente en móvil.
+  line = line.replace(/\t/g, '    ');
+
   // Tokenize roughly: strings, comments, numbers, keywords
-  // We process char-by-char-ish using regex with placeholders to avoid double-processing.
   let result = '';
   let i = 0;
   const len = line.length;
@@ -4206,7 +4214,7 @@ FinSi`
       {
         name: 'Segun / Hacer / FinSegun',
         badge: 'control',
-        desc: 'Evalúa una variable y ejecuta el bloque cuyo valor coincida. Equivale a un switch.',
+        desc: 'Evalúa una variable y ejecuta el bloque cuyo valor coincida. Equivale a un switch. El "FinSegun" es OBLIGATORIO para cerrar el bloque. "De Otro Modo" captura cualquier valor no listado (opcional).',
         example: `Segun dia Hacer
     1: Escribir "Lunes";
     2: Escribir "Martes";
@@ -4227,7 +4235,7 @@ FinSegun`
       {
         name: 'Mientras / Hacer / FinMientras',
         badge: 'ciclo',
-        desc: 'Repite mientras la condición sea verdadera. Si la condición es falsa desde el inicio, no ejecuta nada.',
+        desc: 'Repite mientras la condición sea verdadera. Si la condición es falsa desde el inicio, no ejecuta nada. El "FinMientras" es OBLIGATORIO para cerrar el bloque.',
         example: `i <- 1;
 Mientras i <= 5 Hacer
     Escribir i;
@@ -4237,7 +4245,7 @@ FinMientras`
       {
         name: 'Repetir / Hasta Que',
         badge: 'ciclo',
-        desc: 'Ejecuta el bloque al menos una vez y repite hasta que la condición sea verdadera.',
+        desc: 'Ejecuta el bloque al menos una vez y repite hasta que la condición sea verdadera. El "Hasta Que <condición>;" es OBLIGATORIO para cerrar el bloque.',
         example: `Repetir
     Escribir "Ingrese un número entre 1 y 10:";
     Leer n;
@@ -4247,7 +4255,7 @@ Escribir "Ingresaste: ", n;`
       {
         name: 'Para / Hasta / Con Paso / Hacer / FinPara',
         badge: 'ciclo',
-        desc: 'Ciclo con contador. El paso es 1 por defecto. Puede ser negativo para contar hacia atrás.',
+        desc: 'Ciclo con contador. El paso es 1 por defecto. Puede ser negativo para contar hacia atrás. El "FinPara" es OBLIGATORIO para cerrar el bloque. El contador se declara automáticamente sin necesidad de Definir.',
         example: `// Contar de 1 a 5
 Para i <- 1 Hasta 5 Hacer
     Escribir i;
@@ -4274,7 +4282,7 @@ FinPara`
       {
         name: 'SubProceso <nombre>(<params>)',
         badge: 'procedimiento',
-        desc: 'Define un bloque reutilizable sin valor de retorno. Se llama como una instrucción. Los parámetros son locales.',
+        desc: 'Define un bloque reutilizable sin valor de retorno. Se llama como una instrucción. Los parámetros son locales y se declaran automáticamente. El "FinSubProceso" es OBLIGATORIO para cerrar la definición.',
         example: `SubProceso Saludar(nombre)
     Escribir "¡Hola, ", nombre, "!";
 FinSubProceso
@@ -4286,7 +4294,7 @@ Saludar("Ana");`
       {
         name: 'Funcion <retorno> <- <nombre>(<params>)',
         badge: 'función',
-        desc: 'Define una función que devuelve un valor. Se asigna el resultado a la variable de retorno.',
+        desc: 'Define una función que devuelve un valor. Se asigna el resultado a la variable de retorno. Los parámetros y la variable de retorno se declaran automáticamente. El "FinFuncion" es OBLIGATORIO para cerrar la definición.',
         example: `Funcion resultado <- Cuadrado(n)
     resultado <- n * n;
 FinFuncion
@@ -4868,6 +4876,14 @@ function setDirty(dirty) {
 // Marcar como sucio cada vez que se edita
 codeInput.addEventListener('input', () => {
   if (currentFileId) setDirty(true);
+  // Normalizar tabs en tiempo real (al escribir o pegar)
+  if (codeInput.value.includes('\t')) {
+    const pos = codeInput.selectionStart;
+    const beforeCursor = codeInput.value.slice(0, pos);
+    const tabsBefore = (beforeCursor.match(/\t/g) || []).length;
+    codeInput.value = codeInput.value.replace(/\t/g, '    ');
+    codeInput.selectionStart = codeInput.selectionEnd = pos + tabsBefore * 3;
+  }
 });
 
 // Modal de cambios sin guardar
@@ -5044,7 +5060,8 @@ function renderFilesList() {
 function openFile(id) {
   const file = getFile(id);
   if (!file) return;
-  codeInput.value = file.code;
+  // Normalizar tabs al abrir para consistencia visual
+  codeInput.value = file.code.replace(/\t/g, '    ');
   currentFileId = id;
   currentFileNameEl.textContent = file.name;
   setDirty(false);
@@ -5478,6 +5495,8 @@ FinAlgoritmo`,
   <li><code>Para i <- 1 Hasta 5 Hacer</code> — repite con i = 1, 2, 3, 4, 5</li>
   <li><code>Con Paso 2</code> — avanza de a 2</li>
   <li><code>Con Paso -1</code> — cuenta hacia atrás</li>
+  <li><strong><code>FinPara</code> es obligatorio</strong> para cerrar el bloque.</li>
+  <li>El contador (<code>i</code>) se declara automáticamente — no necesitás <code>Definir</code> para él.</li>
 </ul>`,
         example:`Algoritmo TablaDelCinco
     Para i <- 1 Hasta 10 Hacer
@@ -5503,6 +5522,7 @@ FinAlgoritmo`,
 <ul>
   <li>Útil cuando no sabés cuántas repeticiones son necesarias.</li>
   <li>Asegurate de que la condición eventualmente sea falsa para evitar ciclos infinitos.</li>
+  <li><strong><code>FinMientras</code> es obligatorio</strong> para cerrar el bloque.</li>
 </ul>`,
         example:`Algoritmo ContarHasta
     Definir i Como Entero;
@@ -5531,6 +5551,7 @@ FinAlgoritmo`,
 <ul>
   <li>Muy útil para validar datos del usuario.</li>
   <li>La condición indica <em>cuándo parar</em>, no cuándo continuar.</li>
+  <li><strong><code>Hasta Que &lt;condición&gt;;</code> es obligatorio</strong> para cerrar el bloque.</li>
 </ul>`,
         example:`Algoritmo ValidarEdad
     Definir edad Como Entero;
@@ -5568,6 +5589,8 @@ FinAlgoritmo`,
   <li>Se puede llamar como una instrucción normal.</li>
   <li>Las variables internas son <em>locales</em>.</li>
   <li>Se puede definir antes o después del <code>Algoritmo</code> principal.</li>
+  <li>Los parámetros se declaran automáticamente — no necesitás <code>Definir</code> para ellos.</li>
+  <li><strong><code>FinSubProceso</code> es obligatorio</strong> para cerrar la definición.</li>
 </ul>`,
         example:`Algoritmo EjemploSub
 
@@ -5600,6 +5623,8 @@ FinAlgoritmo`,
   <li>Sintaxis: <code>Funcion retorno <- Nombre(params)</code></li>
   <li>Se asigna el resultado a la variable de retorno.</li>
   <li>Uso: <code>x <- MiFuncion(5)</code> o dentro de <code>Escribir</code>.</li>
+  <li>Los parámetros y la variable de retorno se declaran automáticamente.</li>
+  <li><strong><code>FinFuncion</code> es obligatorio</strong> para cerrar la definición.</li>
 </ul>`,
         example:`Algoritmo EjemploFuncion
 
