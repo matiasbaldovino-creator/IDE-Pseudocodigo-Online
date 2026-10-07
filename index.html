@@ -401,6 +401,66 @@
   #learnBtn:hover { background: var(--border); color: var(--text-main); }
   #learnBtn.active { border-color: #c586c0; color: #c586c0; background: transparent; }
 
+  #diagramBtn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  #diagramBtn:hover { background: var(--border); color: var(--text-main); }
+  #diagramBtn.active { border-color: #4ec9b0; color: #4ec9b0; background: transparent; }
+
+  /* Diagrama modal */
+  .diagram-modal {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    width: min(900px, 94vw);
+    height: min(650px, 82dvh);
+    display: flex; flex-direction: column;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    overflow: hidden;
+  }
+  .diagram-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--titlebar);
+    flex-shrink: 0;
+  }
+  .diagram-title { font-weight: 700; font-size: 14px; flex: 1; }
+  .diagram-actions { display: flex; gap: 8px; align-items: center; }
+  .diagram-export-btn {
+    font-family: inherit; font-size: 11px;
+    padding: 4px 10px; border-radius: 4px;
+    background: rgba(78,201,176,0.12);
+    border: 1px solid rgba(78,201,176,0.3);
+    color: #4ec9b0; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .diagram-export-btn:hover { background: rgba(78,201,176,0.25); }
+  .diagram-body {
+    flex: 1; overflow: auto;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px;
+    background: var(--bg-editor);
+  }
+  .diagram-body svg { max-width: 100%; height: auto; display: block; }
+  .diagram-empty {
+    display: flex; align-items: center; justify-content: center;
+    flex: 1; color: var(--text-dim); font-size: 13px; text-align: center;
+    padding: 40px;
+  }
+  @media (max-width: 760px) {
+    .diagram-modal { width: 100vw; max-height: 90vh; border-radius: 0; }
+  }
+
   /* ── Donate button ── */
   .donate-btn {
     background: transparent;
@@ -1193,12 +1253,26 @@
     width: 100%;
   }
 
-  /* Syntax highlight tokens */
-  .tok-kw { color: var(--keyword); }
-  .tok-str { color: var(--string); }
-  .tok-cmt { color: var(--comment); font-style: italic; }
-  .tok-num { color: var(--number); }
-  .tok-fn { color: var(--accent); }
+  /* Syntax highlight tokens — dark theme */
+  .tok-kw     { color: var(--keyword); }
+  .tok-str    { color: var(--string); }
+  .tok-cmt    { color: var(--comment); font-style: italic; }
+  .tok-num    { color: var(--number); }
+  .tok-fn     { color: #dcdcaa; }
+  .tok-type   { color: #4ec9b0; }
+  .tok-bool   { color: #569cd6; }
+  .tok-assign { color: #d4d4d4; font-weight: 600; }
+  .tok-op     { color: #d4d4d4; opacity: 0.85; }
+  .tok-var    { color: #9cdcfe; }
+  .tok-punct  { color: #d4d4d4; opacity: 0.6; }
+  /* Token colors — light theme */
+  body.light .tok-fn     { color: #795e26; }
+  body.light .tok-type   { color: #267f99; }
+  body.light .tok-bool   { color: #0000ff; }
+  body.light .tok-assign { color: #000000; }
+  body.light .tok-op     { color: #555555; opacity: 1; }
+  body.light .tok-var    { color: #001080; }
+  body.light .tok-punct  { color: #555555; opacity: 1; }
 
   /* Console */
   #consoleOutput {
@@ -1547,6 +1621,7 @@
       <button id="filesBtn" title="Gestor de archivos">📁 Archivos</button>
       <button id="docsBtn" title="Documentación y referencia">📖 Ayuda</button>
       <button id="learnBtn" title="Tutoriales y aprendizaje guiado">🎓 Aprender</button>
+      <button id="diagramBtn" title="Generar diagrama de flujo del programa">📊 Diagrama</button>
       <button id="clearConsoleBtn" title="Limpiar la consola manualmente">Limpiar consola</button>
       <button id="stopBtn" title="Detener ejecución (Escape)">■ Detener</button>
       <button id="runBtn" title="Ejecutar algoritmo (Ctrl+Enter)">▶ Ejecutar</button>
@@ -1814,97 +1889,76 @@ FinAlgoritmo`;
 
 codeInput.value = DEFAULT_CODE;
 
-const KEYWORDS = [
-  'Proceso','FinProceso','Algoritmo','FinAlgoritmo',
-  'SubProceso','SubProcedimiento','FinSubProceso','FinSubProcedimiento',
-  'Funcion','Función','FinFuncion','FinFunción',
-  'Retornar','Retorno','Return',
-  'Escribir','Escriba','Mostrar',
-  'Leer','Lea',
-  'Si','Entonces','SiNo','Sino','FinSi',
-  'Mientras','Hacer','FinMientras',
-  'Repetir','Hasta','Que','FinRepetir',
-  'Para','Con','Paso','FinPara',
-  'Segun','Según','DeOtroModo','FinSegun','FinSegún',
-  'Definir','Como','Dimension','Dimensión',
-  'Verdadero','Falso','VERDADERO','FALSO',
-  'Limpiar','Pantalla','Borrar',
-  'Entero','Real','Logico','Lógico','Caracter','Carácter','Cadena',
-  'MOD','DIV','Y','O','NO','y','o','no',
-  'Esperar','Tecla','Segundo','Segundos','Milisegundos',
-  'Por','Referencia','Valor',
+// ── Tokenizador regex-based ───────────────────────────────────────────────
+// Cada token: [regex, clase CSS | null]
+// Orden: de más específico a más general.
+const TOKENS = [
+  // Comentarios
+  [/^\/\/.*$/,                                                                           'tok-cmt'],
+  // Strings
+  [/^"(?:[^"\\]|\\.)*"?/,                                                                'tok-str'],
+  // Keywords multi-palabra — ANTES que los simples
+  [/^Sino[\s-]+Si\b/i,                                                                   'tok-kw'],
+  [/^De\s+Otro\s+Modo\b/i,                                                               'tok-kw'],
+  [/^Hasta\s+Que\b/i,                                                                    'tok-kw'],
+  [/^Sin\s+Saltar(?:\s+L[ií]nea)?\b/i,                                                  'tok-kw'],
+  [/^Con\s+Paso\b/i,                                                                     'tok-kw'],
+  [/^Limpiar\s+Pantalla\b/i,                                                             'tok-kw'],
+  [/^Por\s+Referencia\b/i,                                                               'tok-kw'],
+  [/^Por\s+Valor\b/i,                                                                    'tok-kw'],
+  // Tipos — color propio
+  [/^(?:Entero|Real|Cadena|Logico|Lógico|Caracter|Carácter)\b/i,                        'tok-type'],
+  // Booleanos — color propio
+  [/^(?:Verdadero|Falso)\b/i,                                                            'tok-bool'],
+  // Funciones built-in (solo si van seguidas de '(')
+  [/^(?:RC|ABS|LN|EXP|SEN|COS|TAN|ATAN|ASIN|ACOS|TRUNC|REDON|AZAR|MAYUSCULAS|MINUSCULAS|MAYUS|MINUS|LONGITUD|CONCATENAR|SUBCADENA|CONVERTIRANUMERO|CONVERTIRATEXTO|SUBSTR)\b(?=\s*\()/i, 'tok-fn'],
+  // Keywords simples
+  [/^(?:Proceso|FinProceso|Algoritmo|FinAlgoritmo|SubProceso|SubProcedimiento|FinSubProceso|FinSubProcedimiento|Funcion|Función|FinFuncion|FinFunción|Retornar|Retorno|Escribir|Escriba|Mostrar|Leer|Lea|Si|Entonces|Sino|FinSi|Mientras|Hacer|FinMientras|Repetir|FinRepetir|Para|Hasta|FinPara|Segun|Según|FinSegun|FinSegún|Definir|Como|Dimension|Dimensión|MOD|DIV|Y|O|NO|Esperar|Tecla|Segundos?|Milisegundos|Borrar|Con|Paso|Dimension|Sin)\b/i, 'tok-kw'],
+  // Operador asignación <- (antes que los de un char)
+  [/^<-/,                                                                                'tok-assign'],
+  // Operadores de comparación multi-char
+  [/^(?:<>|>=|<=)/,                                                                      'tok-op'],
+  // Operadores de un char
+  [/^[+\-*\/^<>=]/,                                                                      'tok-op'],
+  // Números
+  [/^\d+(?:\.\d+)?/,                                                                     'tok-num'],
+  // Identificadores (variables)
+  [/^[A-Za-záéíóúñÁÉÍÓÚÑ_][A-Za-z0-9áéíóúñÁÉÍÓÚÑ_]*/,                                'tok-var'],
+  // Puntuación
+  [/^[;,[\]()]/,                                                                         'tok-punct'],
+  // Resto (espacios, otros)
+  [/^[\s\S]/,                                                                             null],
 ];
-
-const FUNCS = ['RC','ABS','LN','EXP','SEN','COS','TAN','ATAN','ASIN','ACOS',
-                'TRUNC','REDON','AZAR','MAYUS','MINUS','MAYUSCULAS','MINUSCULAS',
-                'LONGITUD','CONCATENAR',
-                'SUBCADENA','CONVERTIRANUMERO','CONVERTIRATEXTO','SUBSTR'];
 
 function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// Build a regex with all keywords (word-boundary, case-insensitive)
-const kwPattern = new RegExp('\\b(' + KEYWORDS.map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|') + ')\\b','gi');
-const fnPattern = new RegExp('\\b(' + FUNCS.join('|') + ')\\s*(?=\\()','gi');
-
 function highlightLine(line) {
-  // Convertir tabs a 4 espacios para que el highlight layer
-  // se alinee exactamente con la textarea en todos los browsers/dispositivos.
-  // La textarea muestra tabs según tab-size CSS, pero el innerHTML del
-  // highlight layer puede renderizarlos diferente — especialmente en móvil.
+  // Tabs → 4 espacios para alineación exacta con la textarea
   line = line.replace(/\t/g, '    ');
+  if (line === '') return '&nbsp;';
 
-  // Tokenize roughly: strings, comments, numbers, keywords
   let result = '';
   let i = 0;
   const len = line.length;
+
   while (i < len) {
-    const ch = line[i];
-    // Comment // -> rest of line
-    if (ch === '/' && line[i+1] === '/') {
-      result += `<span class="tok-cmt">${escapeHtml(line.slice(i))}</span>`;
-      break;
-    }
-    // String literal
-    if (ch === '"') {
-      let j = i+1;
-      while (j < len && line[j] !== '"') j++;
-      const strContent = line.slice(i, Math.min(j+1, len));
-      result += `<span class="tok-str">${escapeHtml(strContent)}</span>`;
-      i = j+1;
-      continue;
-    }
-    // Number
-    if (/[0-9]/.test(ch)) {
-      let j = i;
-      while (j < len && /[0-9.]/.test(line[j])) j++;
-      result += `<span class="tok-num">${escapeHtml(line.slice(i,j))}</span>`;
-      i = j;
-      continue;
-    }
-    // Word (keyword / function / identifier)
-    if (/[A-Za-zÁÉÍÓÚÑáéíóúñ_]/.test(ch)) {
-      let j = i;
-      while (j < len && /[A-Za-z0-9ÁÉÍÓÚÑáéíóúñ_]/.test(line[j])) j++;
-      const word = line.slice(i,j);
-      const isFn = FUNCS.includes(word.toUpperCase()) && line[j] === '(';
-      const isKw = KEYWORDS.some(k => k.toLowerCase() === word.toLowerCase());
-      if (isFn) {
-        result += `<span class="tok-fn">${escapeHtml(word)}</span>`;
-      } else if (isKw) {
-        result += `<span class="tok-kw">${escapeHtml(word)}</span>`;
-      } else {
-        result += escapeHtml(word);
+    const rest = line.slice(i);
+    let found = false;
+    for (const [re, cls] of TOKENS) {
+      const m = re.exec(rest);
+      if (m) {
+        const text = escapeHtml(m[0]);
+        result += cls ? `<span class="${cls}">${text}</span>` : text;
+        i += m[0].length;
+        found = true;
+        break;
       }
-      i = j;
-      continue;
     }
-    // default: escape single char
-    result += escapeHtml(ch);
-    i++;
+    if (!found) { result += escapeHtml(line[i]); i++; }
   }
-  return result === '' ? '&nbsp;' : result;
+  return result;
 }
 
 function updateEditorView() {
@@ -2847,14 +2901,43 @@ function parseProgram(sourceText) {
               pos++;
               defaultBody = parseBlock([{name:'finsegun',regex:RE.finsegun}]);
             } else {
-              const caseMatch = /^([^:]+):\s*([\s\S]*)$/.exec(caseText);
+              // Un label de caso válido es:
+              //   - número:              1:   2, 3:
+              //   - string completo:     "a":   "abc":
+              //   - identificador:       opcion:
+              // NO es label si:
+              //   - empieza con keyword (Escribir, Leer, Si, etc.)
+              //   - tiene ; al final (es instrucción)
+              //   - el : está DENTRO de un string (ej: Escribir "hola:")
+              const isKeywordLine = /^(?:escribir|escriba|mostrar|leer|lea|definir|si\b|sino|mientras|para\b|repetir|segun|esperar|limpiar|borrar|dimension|retornar|\/\/)/i.test(caseText);
+              const hasSemicolon  = caseText.trim().endsWith(';');
+              // Detectar si el : está dentro de un string: buscar el primer : fuera de comillas
+              function firstColonOutsideString(s) {
+                let inStr = false;
+                for (let ci = 0; ci < s.length; ci++) {
+                  if (s[ci] === '"') inStr = !inStr;
+                  if (!inStr && s[ci] === ':') return ci;
+                }
+                return -1;
+              }
+              const colonPos = firstColonOutsideString(caseText);
+              // Es label si: tiene : fuera de strings, no es keyword, no tiene ;, y el : es el último char significativo
+              const afterColon = colonPos >= 0 ? caseText.slice(colonPos + 1).trim() : '';
+              const colonIsAtEnd = colonPos >= 0 && (afterColon === '' || afterColon === '');
+              const caseMatch = !isKeywordLine && !hasSemicolon && colonPos >= 0
+                ? /^([^:]+):\s*([\s\S]*)$/.exec(caseText)
+                : null;
               if (caseMatch) {
                 const labels = caseMatch[1].split(',').map(s=>s.trim());
                 const restText = caseMatch[2].trim();
                 pos++;
                 const savedPos = pos;
                 if (restText !== '') body.splice(pos, 0, {text:restText, line:body[savedPos-1].line});
-                const caseBody = parseBlock([{name:'finsegun',regex:RE.finsegun},{name:'caselabel',regex:/^([^:]+):/}]);
+                const caseBody = parseBlock([
+                  {name:'finsegun',  regex: RE.finsegun},
+                  {name:'deotromodo',regex: RE.deotromodo},
+                  {name:'caselabel', regex: /^(?!(?:escribir|escriba|mostrar|leer|lea|definir|si\b|sino|mientras|para\b|repetir|segun|esperar|limpiar|borrar|dimension|retornar|\/\/))[^;]+:(?!.*;\s*$)/i}
+                ]);
                 cases.push({labels, body:caseBody});
               } else { pos++; }
             }
@@ -3359,7 +3442,7 @@ function defaultForType(tipo) {
   const t = (tipo || '').toLowerCase();
   if (t === 'entero' || t === 'real') return 0;
   if (t === 'logico' || t === 'lógico') return false;
-  if (t === 'cadena' || t === 'caracter' || t === 'carácter') return '';
+  if (t === 'cadena' || t === 'texto' || t === 'caracter' || t === 'carácter') return '';
   return 0;
 }
 
@@ -3377,7 +3460,7 @@ async function runInterpreter({ mainAst, subDefs }) {
         [
           `Antes de usar "${base}" debés declararla con Definir.`,
           `Ejemplo: Definir ${base} Como Entero;`,
-          `Tipos disponibles: Entero, Real, Cadena, Logico, Caracter.`
+          `Tipos disponibles: Entero, Real, Cadena, Texto, Logico, Caracter.`
         ]
       );
     }
@@ -4078,7 +4161,7 @@ FinAlgoritmo`
       {
         name: 'Definir <var> Como <Tipo>',
         badge: 'declaración',
-        desc: 'Declara una variable indicando su tipo. Es obligatorio declarar todas las variables con Definir antes de usarlas. Tipos disponibles: Entero, Real, Cadena, Logico, Caracter. Podés declarar varias juntas separándolas con comas.',
+        desc: 'Declara una variable indicando su tipo. Es obligatorio declarar todas las variables con Definir antes de usarlas. Tipos disponibles: Entero, Real, Cadena (o Texto), Logico, Caracter. Podés declarar varias juntas separándolas con comas.',
         example: `Definir edad Como Entero;
 Definir nombre Como Cadena;
 Definir precio Como Real;
@@ -6714,6 +6797,522 @@ document.addEventListener('keydown', e => { if (e.key==='Escape' && learnOverlay
     }
   });
 })();
+
+/* =========================================================================
+   GENERADOR DE DIAGRAMA DE FLUJO
+   Convierte el AST del programa en un SVG con formas estándar de diagrama.
+   ========================================================================= */
+
+// ── Constantes de layout ──────────────────────────────────────────────────
+/* =========================================================================
+   GENERADOR DE DIAGRAMA DE FLUJO — v2
+   Layout de dos pasadas:
+   1. measure(): calcula el ancho/alto de cada bloque recursivamente
+   2. render():  genera el SVG posicionando todo centrado
+   ========================================================================= */
+
+// ── Constantes ────────────────────────────────────────────────────────────
+const DG = {
+  // Tamaños de nodos
+  NODE_W:   180,  // ancho rectángulos / paralelogramos / óvalos
+  NODE_H:    44,  // alto  rectángulos / paralelogramos / óvalos
+  DIAM_W:   180,  // ancho rombo (base del diamante)
+  DIAM_H:    56,  // alto  rombo
+  // Espaciado
+  V:         32,  // separación vertical entre nodos
+  H:         60,  // separación horizontal mínima entre ramas
+  SIDE:      50,  // ancho del loop de retorno lateral
+  // Texto
+  FONT:      12,
+  MAXCH:     24,  // max caracteres en etiqueta
+  // Colores
+  C: {
+    bg:      '#1e1e1e',
+    arrow:   '#6a9955',
+    start:   '#4ec9b0',
+    startTx: '#1e1e1e',
+    proc:    '#569cd6',
+    procTx:  '#d4d4d4',
+    io:      '#c586c0',
+    ioTx:    '#d4d4d4',
+    dec:     '#e5c07b',
+    decTx:   '#1e1e1e',
+    call:    '#9cdcfe',
+    callTx:  '#1e1e1e',
+  }
+};
+
+const PAD = 40; // padding exterior del SVG
+
+function dgEsc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+function dgClamp(s, max) {
+  s = String(s).replace(/\s+/g,' ').trim();
+  return s.length > max ? s.slice(0, max-1) + '…' : s;
+}
+
+// ── Primitivas SVG ────────────────────────────────────────────────────────
+function svgOval(x, y, w, h, label, fill, textFill) {
+  return `<ellipse cx="${x}" cy="${y}" rx="${w/2}" ry="${h/2}" fill="${fill}" stroke="${fill}" stroke-width="1.5"/>
+<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${DG.FONT}" fill="${textFill}" font-weight="bold" font-family="Consolas,monospace">${dgEsc(dgClamp(label, DG.MAXCH))}</text>`;
+}
+
+function svgRect(x, y, w, h, label, fill, textFill, double_border) {
+  let r = `<rect x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}" rx="4" fill="${fill}22" stroke="${fill}" stroke-width="1.5"/>`;
+  if (double_border) {
+    const o = 6;
+    r += `<line x1="${x-w/2+o}" y1="${y-h/2}" x2="${x-w/2+o}" y2="${y+h/2}" stroke="${fill}" stroke-width="1"/>
+<line x1="${x+w/2-o}" y1="${y-h/2}" x2="${x+w/2-o}" y2="${y+h/2}" stroke="${fill}" stroke-width="1"/>`;
+  }
+  r += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${DG.FONT}" fill="${textFill}" font-family="Consolas,monospace">${dgEsc(dgClamp(label, DG.MAXCH))}</text>`;
+  return r;
+}
+
+function svgPara(x, y, w, h, label, fill, textFill) {
+  const sk = 10;
+  const pts = `${x-w/2+sk},${y-h/2} ${x+w/2+sk},${y-h/2} ${x+w/2-sk},${y+h/2} ${x-w/2-sk},${y+h/2}`;
+  return `<polygon points="${pts}" fill="${fill}22" stroke="${fill}" stroke-width="1.5"/>
+<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${DG.FONT}" fill="${textFill}" font-family="Consolas,monospace">${dgEsc(dgClamp(label, DG.MAXCH))}</text>`;
+}
+
+function svgDiamond(x, y, w, h, label, fill, textFill) {
+  const pts = `${x},${y-h/2} ${x+w/2},${y} ${x},${y+h/2} ${x-w/2},${y}`;
+  // Split label in two lines if long
+  const words = label.split(' ');
+  let l1 = '', l2 = '';
+  for (const w of words) {
+    if ((l1 + ' ' + w).trim().length <= 16) l1 = (l1+' '+w).trim();
+    else l2 = (l2+' '+w).trim();
+  }
+  const txtEl = l2
+    ? `<text text-anchor="middle" font-size="${DG.FONT-1}" fill="${textFill}" font-weight="bold" font-family="Consolas,monospace">
+        <tspan x="${x}" y="${y-7}">${dgEsc(dgClamp(l1,18))}</tspan>
+        <tspan x="${x}" dy="13">${dgEsc(dgClamp(l2,18))}</tspan>
+       </text>`
+    : `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${DG.FONT-1}" fill="${textFill}" font-weight="bold" font-family="Consolas,monospace">${dgEsc(dgClamp(label,20))}</text>`;
+  return `<polygon points="${pts}" fill="${fill}" stroke="${fill}" stroke-width="1.5"/>${txtEl}`;
+}
+
+function svgArrow(x1, y1, x2, y2, lbl, labelSide) {
+  const c = DG.C.arrow;
+  let path = '';
+  // Routing: si x1===x2, línea recta; si no, línea en L
+  if (Math.abs(x1-x2) < 2) {
+    path = `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="1.5" marker-end="url(#arr)"/>`;
+  } else {
+    const my = (y1+y2)/2;
+    path = `<polyline points="${x1},${y1} ${x1},${my} ${x2},${my} ${x2},${y2}" fill="none" stroke="${c}" stroke-width="1.5" marker-end="url(#arr)"/>`;
+  }
+  let txt = '';
+  if (lbl) {
+    const lx = labelSide === 'right' ? Math.max(x1,x2)+4 : Math.min(x1,x2)-4;
+    const anchor = labelSide === 'right' ? 'start' : 'end';
+    const ly = (y1+y2)/2 - 4;
+    txt = `<text x="${lx}" y="${ly}" text-anchor="${anchor}" font-size="10" fill="${c}" font-family="Consolas,monospace">${dgEsc(lbl)}</text>`;
+  }
+  return path + txt;
+}
+
+function svgLine(x1,y1,x2,y2,dashed) {
+  const d = dashed ? ' stroke-dasharray="4,3"' : '';
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${DG.C.arrow}" stroke-width="1.5"${d}/>`;
+}
+
+// ── Modelo de nodo de layout ──────────────────────────────────────────────
+// Cada bloque devuelve: { w, h } en la pasada measure
+// y genera SVG en la pasada render(x_center, y_top) → { svg, exitX, exitY }
+
+function measureBlock(nodes) {
+  let w = DG.NODE_W, h = 0;
+  for (const node of nodes) {
+    const m = measureNode(node);
+    w = Math.max(w, m.w);
+    h += m.h + (h > 0 ? DG.V : 0);
+  }
+  return { w: Math.max(w, DG.NODE_W), h: Math.max(h, 0) };
+}
+
+function measureNode(node) {
+  const NW = DG.NODE_W, NH = DG.NODE_H, DH = DG.DIAM_H, DW = DG.DIAM_W;
+  switch (node.type) {
+    case 'noop': case 'declare': case 'dimension': return { w:0, h:0 };
+    case 'write': case 'read': case 'assign': case 'callSub': case 'clear':
+    case 'esperarTecla': case 'esperarTiempo': case 'return':
+      return { w: NW, h: NH };
+    case 'if': {
+      const thenM = measureBlock(node.thenBody || []);
+      const elseM = measureBlock(node.elseBody || []);
+      const hasElse = (node.elseBody || []).length > 0;
+      const hasThen = (node.thenBody || []).length > 0;
+      if (hasElse && hasThen) {
+        const branchW = Math.max(thenM.w, NW) + Math.max(elseM.w, NW) + DG.H * 2;
+        const branchH = Math.max(thenM.h, elseM.h);
+        return { w: branchW, h: DH + DG.V + branchH + DG.V };
+      } else {
+        return { w: Math.max(thenM.w, NW) + DG.SIDE * 2, h: DH + DG.V + (hasThen ? thenM.h + DG.V : 0) };
+      }
+    }
+    case 'while': {
+      const bodyM = measureBlock(node.body || []);
+      return { w: Math.max(bodyM.w, NW) + DG.SIDE * 2, h: DH + DG.V + bodyM.h + DG.V + DG.V };
+    }
+    case 'repeat': {
+      const bodyM = measureBlock(node.body || []);
+      return { w: Math.max(bodyM.w, NW) + DG.SIDE * 2, h: bodyM.h + DG.V + DH + DG.V };
+    }
+    case 'for': {
+      const bodyM = measureBlock(node.body || []);
+      return { w: Math.max(bodyM.w, NW) + DG.SIDE * 2, h: NH + DG.V + DH + DG.V + bodyM.h + DG.V + NH + DG.V };
+    }
+    case 'switch': {
+      const cases = node.cases || [];
+      const defaultB = node.defaultBody || [];
+      const allBodies = [...cases.map(c => c.body), defaultB.length ? defaultB : null].filter(Boolean);
+      if (allBodies.length === 0) return { w: DW + DG.H*2, h: DH };
+      const branchW = allBodies.reduce((acc, b) => acc + Math.max(measureBlock(b).w, NW) + DG.H, DG.H);
+      const branchH = Math.max(...allBodies.map(b => measureBlock(b).h));
+      return { w: Math.max(branchW, DW), h: DH + DG.V + branchH + DG.V };
+    }
+    default: return { w: NW, h: NH };
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function renderBlock(nodes, cx, yTop) {
+  let svg = '';
+  let y = yTop;
+  let exitX = cx, exitY = yTop;
+
+  for (const node of nodes) {
+    if (node.type === 'noop' || node.type === 'declare' || node.type === 'dimension') continue;
+    const result = renderNode(node, cx, y);
+    svg += result.svg;
+    if (result.h > 0) {
+      y = result.exitY + DG.V;
+      exitX = result.exitX;
+      exitY = result.exitY;
+    }
+  }
+  return { svg, exitX, exitY };
+}
+
+function renderNode(node, cx, yTop) {
+  const NW = DG.NODE_W, NH = DG.NODE_H;
+  const DW = DG.DIAM_W, DH = DG.DIAM_H;
+  const C = DG.C;
+
+  function simple(label, shapeType, fill, textFill) {
+    const cy = yTop + NH/2;
+    let s = '';
+    if (shapeType === 'oval')  s = svgOval(cx, cy, NW, NH, label, fill, textFill);
+    if (shapeType === 'rect')  s = svgRect(cx, cy, NW, NH, label, fill, textFill, false);
+    if (shapeType === 'call')  s = svgRect(cx, cy, NW, NH, label, fill, textFill, true);
+    if (shapeType === 'para')  s = svgPara(cx, cy, NW, NH, label, fill, textFill);
+    return { svg: s, exitX: cx, exitY: cy + NH/2, h: NH };
+  }
+
+  switch (node.type) {
+    case 'assign': {
+      const lbl = (node.target||'') + ' \u2190 ' + (node.expr||'');
+      return simple(lbl, 'rect', C.proc, C.procTx);
+    }
+    case 'write': {
+      const args = (node.args||[]).join(', ');
+      const lbl = (node.noBreak ? 'Escribir\u25AA' : 'Escribir') + ' ' + args;
+      return simple(lbl, 'para', C.io, C.ioTx);
+    }
+    case 'read': {
+      const lbl = 'Leer ' + (node.vars||[]).join(', ');
+      return simple(lbl, 'para', C.io, C.ioTx);
+    }
+    case 'clear':
+      return simple('Limpiar Pantalla', 'rect', C.proc, C.procTx);
+    case 'esperarTecla':
+      return simple('Esperar Tecla', 'rect', C.proc, C.procTx);
+    case 'esperarTiempo':
+      return simple('Esperar ' + (node.expr||'') + ' ' + (node.unit||''), 'rect', C.proc, C.procTx);
+    case 'callSub':
+      return simple(node.name + '(' + (node.argsText||'') + ')', 'call', C.call, C.callTx);
+    case 'return':
+      return simple('Retornar ' + (node.expr||''), 'rect', C.proc, C.procTx);
+
+    case 'if': {
+      const hasThen = (node.thenBody||[]).length > 0;
+      const hasElse = (node.elseBody||[]).length > 0;
+      let svg = '';
+
+      // Rombo
+      const dy = yTop + DH/2;
+      svg += svgDiamond(cx, dy, DW, DH, node.cond||'?', C.dec, C.decTx);
+      const dBottomY = dy + DH/2;
+      const dRightX  = cx + DW/2;
+      const dLeftX   = cx - DW/2;
+
+      if (hasThen && hasElse) {
+        const thenM = measureBlock(node.thenBody);
+        const elseM = measureBlock(node.elseBody);
+        const halfGap = Math.max(DG.H, Math.max(thenM.w, elseM.w)/2 + DG.H/2);
+        const thenCX = cx + halfGap;
+        const elseCX = cx - halfGap;
+        const branchY = dBottomY + DG.V;
+
+        // Flechas desde rombo
+        svg += svgArrow(dRightX, dy, thenCX, branchY, 'Sí', 'right');
+        svg += svgArrow(dLeftX,  dy, elseCX, branchY, 'No', 'left');
+
+        // Ramas
+        const thenR = renderBlock(node.thenBody, thenCX, branchY);
+        const elseR = renderBlock(node.elseBody, elseCX, branchY);
+        svg += thenR.svg + elseR.svg;
+
+        // Merge: bajar ambas ramas al mismo Y y juntar
+        const mergeY = Math.max(thenR.exitY, elseR.exitY) + DG.V;
+        svg += svgLine(thenR.exitX, thenR.exitY, thenR.exitX, mergeY);
+        svg += svgLine(elseR.exitX, elseR.exitY, elseR.exitX, mergeY);
+        svg += svgLine(elseR.exitX, mergeY, thenR.exitX, mergeY);
+        // Flecha merge hacia abajo
+        const mergeX = cx;
+        svg += `<line x1="${mergeX}" y1="${mergeY}" x2="${mergeX}" y2="${mergeY+DG.V}" stroke="${C.arrow}" stroke-width="1.5" marker-end="url(#arr)"/>`;
+
+        return { svg, exitX: cx, exitY: mergeY + DG.V, h: mergeY + DG.V - yTop };
+
+      } else if (hasThen) {
+        // Solo rama Sí — No sale por el lado
+        const branchY = dBottomY + DG.V;
+        svg += svgArrow(cx, dBottomY, cx, branchY, 'Sí', 'right');
+        const thenR = renderBlock(node.thenBody, cx, branchY);
+        svg += thenR.svg;
+
+        // Rama No: sale por la derecha del rombo y baja
+        const noX = cx + DW/2 + DG.SIDE;
+        svg += svgLine(dRightX, dy, noX, dy);
+        svg += svgLine(noX, dy, noX, thenR.exitY + DG.V);
+        svg += `<line x1="${noX}" y1="${thenR.exitY+DG.V}" x2="${cx}" y2="${thenR.exitY+DG.V}" stroke="${C.arrow}" stroke-width="1.5" marker-end="url(#arr)"/>`;
+        svg += `<text x="${dRightX+4}" y="${dy-6}" font-size="10" fill="${C.arrow}" font-family="Consolas,monospace">No</text>`;
+
+        return { svg, exitX: cx, exitY: thenR.exitY + DG.V, h: thenR.exitY + DG.V - yTop };
+
+      } else {
+        return { svg, exitX: cx, exitY: dBottomY, h: DH };
+      }
+    }
+
+    case 'while': {
+      let svg = '';
+      const dy = yTop + DH/2;
+      svg += svgDiamond(cx, dy, DW, DH, node.cond||'?', C.dec, C.decTx);
+      const dBottomY = dy + DH/2;
+      const dLeftX   = cx - DW/2;
+
+      // Sí → cuerpo
+      const bodyY = dBottomY + DG.V;
+      svg += svgArrow(cx, dBottomY, cx, bodyY, 'Sí', 'right');
+      const bodyR = renderBlock(node.body||[], cx, bodyY);
+      svg += bodyR.svg;
+
+      // Retorno por la izquierda
+      const loopX = cx - DW/2 - DG.SIDE;
+      svg += svgLine(bodyR.exitX, bodyR.exitY, loopX, bodyR.exitY);
+      svg += svgLine(loopX, bodyR.exitY, loopX, dy);
+      svg += `<line x1="${loopX}" y1="${dy}" x2="${dLeftX}" y2="${dy}" stroke="${C.arrow}" stroke-width="1.5" marker-end="url(#arr)"/>`;
+
+      // No → salida por la derecha
+      const noX = cx + DW/2 + DG.SIDE;
+      const exitY = bodyR.exitY + DG.V;
+      svg += svgLine(cx + DW/2, dy, noX, dy);
+      svg += `<text x="${cx+DW/2+4}" y="${dy-6}" font-size="10" fill="${C.arrow}" font-family="Consolas,monospace">No</text>`;
+      svg += svgLine(noX, dy, noX, exitY);
+      svg += `<line x1="${noX}" y1="${exitY}" x2="${cx}" y2="${exitY}" stroke="${C.arrow}" stroke-width="1.5" marker-end="url(#arr)"/>`;
+
+      return { svg, exitX: cx, exitY, h: exitY - yTop };
+    }
+
+    case 'repeat': {
+      let svg = '';
+      // Cuerpo primero
+      const bodyR = renderBlock(node.body||[], cx, yTop);
+      svg += bodyR.svg;
+
+      // Rombo debajo
+      const dy = bodyR.exitY + DG.V + DH/2;
+      svg += svgArrow(bodyR.exitX, bodyR.exitY, cx, dy - DH/2, '', 'right');
+      svg += svgDiamond(cx, dy, DW, DH, node.cond||'?', C.dec, C.decTx);
+
+      // Sí → salida
+      const exitY = dy + DH/2 + DG.V;
+      svg += svgArrow(cx, dy + DH/2, cx, exitY, 'Sí', 'right');
+
+      // No → retorno por izquierda
+      const loopX = cx - DW/2 - DG.SIDE;
+      svg += svgLine(cx - DW/2, dy, loopX, dy);
+      svg += `<text x="${cx-DW/2-4}" y="${dy-6}" font-size="10" fill="${C.arrow}" text-anchor="end" font-family="Consolas,monospace">No</text>`;
+      svg += svgLine(loopX, dy, loopX, yTop);
+      svg += `<line x1="${loopX}" y1="${yTop}" x2="${cx}" y2="${yTop}" stroke="${C.arrow}" stroke-width="1.5" marker-end="url(#arr)"/>`;
+
+      return { svg, exitX: cx, exitY, h: exitY - yTop };
+    }
+
+    case 'for': {
+      let svg = '';
+      // Init
+      const initY = yTop + NH/2;
+      svg += svgRect(cx, initY, NW, NH, node.varName+' \u2190 '+node.fromExpr, C.proc, C.procTx, false);
+
+      // Condición
+      const condY = initY + NH/2 + DG.V + DH/2;
+      svg += svgArrow(cx, initY+NH/2, cx, condY-DH/2, '', 'right');
+      svg += svgDiamond(cx, condY, DW, DH, node.varName+' \u2264 '+node.toExpr, C.dec, C.decTx);
+
+      // Sí → cuerpo
+      const bodyY = condY + DH/2 + DG.V;
+      svg += svgArrow(cx, condY+DH/2, cx, bodyY, 'Sí', 'right');
+      const bodyR = renderBlock(node.body||[], cx, bodyY);
+      svg += bodyR.svg;
+
+      // Incremento
+      const stepY = bodyR.exitY + DG.V + NH/2;
+      svg += svgArrow(bodyR.exitX, bodyR.exitY, cx, stepY-NH/2, '', 'right');
+      svg += svgRect(cx, stepY, NW, NH, node.varName+' \u2190 '+node.varName+'+'+(node.stepExpr||'1'), C.proc, C.procTx, false);
+
+      // Retorno por izquierda al rombo
+      const loopX = cx - DW/2 - DG.SIDE;
+      svg += svgLine(cx, stepY+NH/2, loopX, stepY+NH/2);
+      svg += svgLine(loopX, stepY+NH/2, loopX, condY);
+      svg += `<line x1="${loopX}" y1="${condY}" x2="${cx-DW/2}" y2="${condY}" stroke="${C.arrow}" stroke-width="1.5" marker-end="url(#arr)"/>`;
+
+      // No → salida derecha
+      const noX = cx + DW/2 + DG.SIDE;
+      const exitY = stepY + NH/2 + DG.V;
+      svg += svgLine(cx+DW/2, condY, noX, condY);
+      svg += `<text x="${cx+DW/2+4}" y="${condY-6}" font-size="10" fill="${C.arrow}" font-family="Consolas,monospace">No</text>`;
+      svg += svgLine(noX, condY, noX, exitY);
+      svg += `<line x1="${noX}" y1="${exitY}" x2="${cx}" y2="${exitY}" stroke="${C.arrow}" stroke-width="1.5" marker-end="url(#arr)"/>`;
+
+      return { svg, exitX: cx, exitY, h: exitY - yTop };
+    }
+
+    case 'switch': {
+      let svg = '';
+      const cases  = node.cases || [];
+      const defBody = (node.defaultBody||[]).length > 0 ? node.defaultBody : null;
+      const allBranches = [
+        ...cases.map(c => ({ label: c.labels.join(', '), body: c.body })),
+        ...(defBody ? [{ label: 'Otro', body: defBody }] : [])
+      ];
+      const N = allBranches.length;
+
+      // Rombo del Segun (decisión múltiple — representamos como hexágono con el texto)
+      const dy = yTop + DH/2;
+      svg += svgDiamond(cx, dy, DW, DH, 'Segun ' + (node.varExpr||''), C.dec, C.decTx);
+      const dBottomY = dy + DH/2;
+
+      if (N === 0) return { svg, exitX: cx, exitY: dBottomY, h: DH };
+
+      // Distribuir ramas horizontalmente
+      const branchWidths = allBranches.map(b => Math.max(measureBlock(b.body).w, DG.NODE_W));
+      const totalW = branchWidths.reduce((a,b) => a + b, 0) + DG.H * (N + 1);
+      const startX = cx - totalW/2;
+
+      // Posiciones X del centro de cada rama
+      let bx = startX + DG.H;
+      const branchCXs = [];
+      for (let i = 0; i < N; i++) {
+        branchCXs.push(bx + branchWidths[i]/2);
+        bx += branchWidths[i] + DG.H;
+      }
+
+      // Línea horizontal desde el rombo
+      const hLineY = dBottomY + DG.V;
+      svg += svgLine(cx, dBottomY, cx, hLineY);
+      svg += svgLine(startX + DG.H/2, hLineY, startX + totalW - DG.H/2, hLineY);
+
+      // Procesar cada rama
+      const branchY = hLineY + DG.V;
+      const branchResults = [];
+      for (let i = 0; i < N; i++) {
+        const bCX = branchCXs[i];
+        // Etiqueta del caso
+        const lblY = hLineY + DG.V/2;
+        svg += svgLine(bCX, hLineY, bCX, branchY - NH/2 - 4);
+        svg += `<rect x="${bCX-28}" y="${lblY-9}" width="56" height="18" rx="9" fill="${DG.C.dec}" opacity="0.85"/>`;
+        svg += `<text x="${bCX}" y="${lblY}" text-anchor="middle" dominant-baseline="central" font-size="10" fill="${DG.C.decTx}" font-weight="bold" font-family="Consolas,monospace">${dgEsc(dgClamp(allBranches[i].label, 10))}</text>`;
+
+        const br = renderBlock(allBranches[i].body, bCX, branchY);
+        svg += br.svg;
+        branchResults.push(br);
+      }
+
+      // Merge: línea horizontal al nivel del máximo exitY
+      const maxExitY = Math.max(...branchResults.map(b => b.exitY)) + DG.V;
+      for (const br of branchResults) {
+        svg += svgLine(br.exitX, br.exitY, br.exitX, maxExitY);
+      }
+      svg += svgLine(startX + DG.H/2, maxExitY, startX + totalW - DG.H/2, maxExitY);
+      svg += `<line x1="${cx}" y1="${maxExitY}" x2="${cx}" y2="${maxExitY+DG.V}" stroke="${DG.C.arrow}" stroke-width="1.5" marker-end="url(#arr)"/>`;
+
+      return { svg, exitX: cx, exitY: maxExitY + DG.V, h: maxExitY + DG.V - yTop };
+    }
+
+    default:
+      return { svg:'', exitX: cx, exitY: yTop, h: 0 };
+  }
+}
+
+// ── Generador principal ───────────────────────────────────────────────────
+function generateDiagram(source) {
+  let parsed;
+  try {
+    parsed = parseProgram(source);
+  } catch (e) {
+    return `<div class="diagram-empty">⚠️ No se puede generar el diagrama:<br><strong>${dgEsc(e.message)}</strong><br>Corregí los errores del programa primero.</div>`;
+  }
+
+  const ast = parsed.mainAst || [];
+
+  // Pasada 1: medir
+  const measured = measureBlock(ast);
+  const totalW = Math.max(measured.w + PAD*4, 400);
+  const cx = totalW / 2;
+
+  // Pasada 2: renderizar
+  let svg = '';
+  let y = PAD;
+
+  // INICIO
+  svg += svgOval(cx, y + DG.NODE_H/2, DG.NODE_W, DG.NODE_H, 'INICIO', DG.C.start, DG.C.startTx);
+  let prevY = y + DG.NODE_H/2 + DG.NODE_H/2;
+  y = prevY + DG.V;
+
+  const result = renderBlock(ast, cx, y);
+  // Conectar INICIO con primer nodo
+  svg += `<line x1="${cx}" y1="${prevY}" x2="${cx}" y2="${y}" stroke="${DG.C.arrow}" stroke-width="1.5" marker-end="url(#arr)"/>`;
+  svg += result.svg;
+
+  // FIN
+  const finY = result.exitY + DG.V;
+  svg += `<line x1="${result.exitX}" y1="${result.exitY}" x2="${cx}" y2="${finY}" stroke="${DG.C.arrow}" stroke-width="1.5" marker-end="url(#arr)"/>`;
+  svg += svgOval(cx, finY + DG.NODE_H/2, DG.NODE_W, DG.NODE_H, 'FIN', DG.C.start, DG.C.startTx);
+
+  const totalH = finY + DG.NODE_H + PAD;
+
+  const defs = `<defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="${DG.C.arrow}"/>
+    </marker>
+  </defs>`;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}" style="background:${DG.C.bg};border-radius:8px;display:block;">
+${defs}
+${svg}
+</svg>`;
+}
+
+// ── UI del diagrama — inicializado después del DOM ────────────────────────
 </script>
 
 
@@ -6855,6 +7454,136 @@ document.addEventListener('keydown', e => { if (e.key==='Escape' && learnOverlay
 
   makeCopyBtn(donateShareEl, window.location.href,       'Copiar link');
   makeCopyBtn(contactCopyEl, 'matiasbaldovino@gmail.com', 'Copiar');
+})();
+</script>
+<!-- Diagrama de flujo: se abre en nueva pestaña al hacer clic en el botón -->
+<script>
+/* Diagrama UI — abre en nueva pestaña para mejor visualización */
+(function() {
+  var dBtn = document.getElementById('diagramBtn');
+  if (!dBtn) return;
+
+  dBtn.addEventListener('click', function() {
+    if (typeof generateDiagram !== 'function') return;
+    var ta = document.getElementById('codeInput');
+    var svgContent = generateDiagram(ta ? ta.value : '');
+
+    // Si generateDiagram retornó un div de error (no SVG), mostrarlo en modal simple
+    if (svgContent.startsWith('<div')) {
+      alert(svgContent.replace(/<[^>]+>/g, ' ').trim());
+      return;
+    }
+
+    // Obtener nombre del archivo actual
+    var fileName = 'diagrama';
+    try {
+      if (typeof currentFileId !== 'undefined' && currentFileId && typeof getFile === 'function') {
+        var f = getFile(currentFileId);
+        if (f && f.name) fileName = f.name.replace(/\.psc$/i, '');
+      }
+    } catch(e) {}
+
+    // Construir página HTML completa para la nueva pestaña
+    var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+      '<title>Diagrama — ' + fileName + '</title>' +
+      '<style>' +
+        '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+        'body { background: #1a1a2e; font-family: Consolas, monospace; color: #d4d4d4; min-height: 100vh; display: flex; flex-direction: column; }' +
+        'header { background: #252545; padding: 10px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #3a3a5c; flex-shrink: 0; }' +
+        'header h1 { font-size: 14px; font-weight: 600; flex: 1; color: #4ec9b0; }' +
+        '.btn { font-family: inherit; font-size: 12px; padding: 5px 14px; border-radius: 5px; cursor: pointer; border: 1px solid; transition: all 0.15s; }' +
+        '.btn-svg { background: rgba(78,201,176,0.12); border-color: rgba(78,201,176,0.4); color: #4ec9b0; }' +
+        '.btn-svg:hover { background: rgba(78,201,176,0.25); }' +
+        '.btn-png { background: rgba(86,156,214,0.12); border-color: rgba(86,156,214,0.4); color: #569cd6; }' +
+        '.btn-png:hover { background: rgba(86,156,214,0.25); }' +
+        '.zoom-info { font-size: 11px; color: #888; min-width: 36px; text-align: right; }' +
+        '#canvas { flex: 1; overflow: auto; padding: 30px; }' +
+        '#wrapper { display: inline-block; transform-origin: top left; }' +
+        '.hint { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: #888; font-size: 11px; padding: 6px 14px; border-radius: 20px; pointer-events: none; opacity: 1; transition: opacity 1s; white-space: nowrap; }' +
+        '.hint.hidden { opacity: 0; }' +
+      '</style></head><body>' +
+      '<header>' +
+        '<span>📊</span>' +
+        '<h1>Diagrama de flujo — ' + fileName + '</h1>' +
+        '<span class="zoom-info" id="zoomLabel">100%</span>' +
+        '<button class="btn btn-svg" id="expSVG">⬇ SVG</button>' +
+        '<button class="btn btn-png" id="expPNG">⬇ PNG</button>' +
+      '</header>' +
+      '<div id="canvas"><div id="wrapper">' + svgContent + '</div></div>' +
+      '<div class="hint" id="hint">🖱 Rueda para zoom · Doble clic para resetear · Pellizco en táctil</div>' +
+      '<script>' +
+        'var wrapper = document.getElementById("wrapper");' +
+        'var svgEl = wrapper.querySelector("svg");' +
+        'var scale = 1, minScale = 0.2, maxScale = 4;' +
+        'function applyScale() {' +
+          'wrapper.style.transform = "scale(" + scale + ")";' +
+          // Ajustar tamaño del canvas para que el scroll funcione correctamente
+          'var svgW = svgEl.viewBox.baseVal.width || svgEl.getBoundingClientRect().width / scale;' +
+          'var svgH = svgEl.viewBox.baseVal.height || svgEl.getBoundingClientRect().height / scale;' +
+          'wrapper.style.width = svgW + "px";' +
+          'wrapper.style.height = svgH + "px";' +
+          'document.getElementById("canvas").style.minWidth = Math.round(svgW * scale + 60) + "px";' +
+          'document.getElementById("canvas").style.minHeight = Math.round(svgH * scale + 60) + "px";' +
+          'document.getElementById("zoomLabel").textContent = Math.round(scale * 100) + "%";' +
+        '}' +
+        // Zoom con rueda — centrado en el punto del cursor
+        'document.getElementById("canvas").addEventListener("wheel", function(e) {' +
+          'e.preventDefault();' +
+          'var delta = e.deltaY > 0 ? 0.9 : 1.1;' +
+          'scale = Math.min(maxScale, Math.max(minScale, scale * delta));' +
+          'applyScale();' +
+        '}, { passive: false });' +
+        // Doble click para resetear
+        'document.getElementById("canvas").addEventListener("dblclick", function() {' +
+          'scale = 1; applyScale();' +
+          'document.getElementById("canvas").scrollTo(0, 0);' +
+        '});' +
+        // Pinch zoom táctil
+        'var lastDist = 0;' +
+        'document.getElementById("canvas").addEventListener("touchmove", function(e) {' +
+          'if (e.touches.length === 2) {' +
+            'e.preventDefault();' +
+            'var dx = e.touches[0].clientX - e.touches[1].clientX;' +
+            'var dy = e.touches[0].clientY - e.touches[1].clientY;' +
+            'var dist = Math.sqrt(dx*dx + dy*dy);' +
+            'if (lastDist > 0) { scale = Math.min(maxScale, Math.max(minScale, scale*(dist/lastDist))); applyScale(); }' +
+            'lastDist = dist;' +
+          '}' +
+        '}, { passive: false });' +
+        'document.getElementById("canvas").addEventListener("touchend", function() { lastDist = 0; });' +
+        // Inicializar
+        'applyScale();' +
+        // Ocultar hint
+        'setTimeout(function() { document.getElementById("hint").classList.add("hidden"); }, 4000);' +
+        // Exportar SVG
+        'document.getElementById("expSVG").addEventListener("click", function() {' +
+          'var blob = new Blob([svgEl.outerHTML], { type: "image/svg+xml" });' +
+          'var a = document.createElement("a"); a.href = URL.createObjectURL(blob);' +
+          'a.download = "' + fileName + '.svg"; a.click();' +
+        '});' +
+        // Exportar PNG
+        'document.getElementById("expPNG").addEventListener("click", function() {' +
+          'var w = svgEl.viewBox.baseVal.width || 640, h = svgEl.viewBox.baseVal.height || 480;' +
+          'var canvas = document.createElement("canvas"); canvas.width = w*2; canvas.height = h*2;' +
+          'var ctx = canvas.getContext("2d"); var img = new Image();' +
+          'var blob = new Blob([svgEl.outerHTML], { type: "image/svg+xml" });' +
+          'img.onload = function() { ctx.scale(2,2); ctx.drawImage(img,0,0);' +
+            'var a = document.createElement("a"); a.href = canvas.toDataURL("image/png");' +
+            'a.download = "' + fileName + '.png"; a.click(); };' +
+          'img.src = URL.createObjectURL(blob);' +
+        '});' +
+      '<\/script></body></html>';
+
+    var tab = window.open('', '_blank');
+    if (tab) {
+      tab.document.write(html);
+      tab.document.close();
+    } else {
+      // Fallback si el navegador bloqueó la nueva pestaña
+      alert('El navegador bloqueó la nueva pestaña. Permití pop-ups para este sitio.');
+    }
+  });
 })();
 </script>
 </body>
