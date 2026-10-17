@@ -2440,18 +2440,30 @@ function levenshtein(a, b) {
 }
 
 // Encuentra el término conocido más parecido a una palabra dada
+const ALL_KEYWORDS = [
+  'Proceso','FinProceso','Algoritmo','FinAlgoritmo',
+  'SubProceso','FinSubProceso','Funcion','FinFuncion',
+  'Retornar','Escribir','Mostrar','Leer',
+  'Si','Entonces','Sino','FinSi',
+  'Mientras','Hacer','FinMientras',
+  'Repetir','Hasta','Que','FinRepetir',
+  'Para','FinPara','Con','Paso',
+  'Segun','Segun','FinSegun',
+  'Definir','Como','Dimension',
+  'Verdadero','Falso','Y','O','NO',
+  'MOD','DIV','Esperar','Tecla','Segundos','Milisegundos',
+  'Limpiar','Pantalla','Sin','Saltar',
+  'RC','ABS','LN','EXP','SEN','COS','TAN','ATAN',
+  'TRUNC','REDON','AZAR','MAYUSCULAS','MINUSCULAS',
+  'LONGITUD','CONCATENAR','SUBCADENA','CONVERTIRANUMERO','CONVERTIRATEXTO',
+];
+
 function closestKeyword(word) {
-  const allTerms = [
-    ...KEYWORDS,
-    ...FUNCS,
-    'FinProceso','FinAlgoritmo','FinSi','FinPara','FinMientras',
-    'FinRepetir','FinSegun','Entonces','Hacer','Hasta','Que',
-  ];
   const w = word.toLowerCase();
   let best = null, bestDist = Infinity;
-  for (const term of allTerms) {
+  for (const term of ALL_KEYWORDS) {
     const t = term.toLowerCase();
-    if (Math.abs(t.length - w.length) > 4) continue; // diferencia de largo muy grande → saltar
+    if (Math.abs(t.length - w.length) > 4) continue;
     const d = levenshtein(w, t);
     if (d < bestDist && d <= 3) { bestDist = d; best = term; }
   }
@@ -2460,125 +2472,199 @@ function closestKeyword(word) {
 
 function diagnoseSyntax(text, line) {
   const t = text.trim();
+  const tl = t.toLowerCase();
   const hints = [];
 
-  // ── 1. Semicolon faltante ────────────────────────────────────────────────
-  // Si parece una instrucción válida (empieza con palabra clave conocida o
-  // tiene <- ) pero no termina en ; y tampoco es una línea de control.
-  // (El splitter ya separó por ;, así que si llegó aquí sin ; el usuario
-  //  puede haber olvidado el punto y coma en un contexto multilinea raro.
-  //  Lo mencionamos como posibilidad si la instrucción tiene forma de asignación
-  //  o Escribir truncado.)
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function add(...msgs) { hints.push(...msgs); }
+  function ret(...msgs) { add(...msgs); return hints; }
 
-  // ── 2. Para sin Hacer / Si sin Entonces ──────────────────────────────────
-  if (/^para\b/i.test(t) && !/\bhacer\s*$/i.test(t)) {
-    if (!/\bhasta\b/i.test(t)) {
-      hints.push('Falta la parte "Hasta <valor>" en el ciclo Para.');
-      hints.push('Sintaxis: Para <var> <- <inicio> Hasta <fin> Hacer');
-    } else {
-      hints.push('Falta la palabra "Hacer" al final del Para.');
-      hints.push('Sintaxis: Para <var> <- <inicio> Hasta <fin> [Con Paso <n>] Hacer');
-    }
-    if (!/\s*<-\s*/.test(t)) hints.push('Falta la asignación inicial: Para <var> <- <inicio> ...');
-    return hints;
+  // ── 1. Bloques de apertura incompletos ───────────────────────────────────
+
+  // Para sin estructura correcta
+  if (/^para\b/i.test(t)) {
+    if (!/<-/.test(t))
+      return ret('Falta la asignación del contador en el Para.',
+                 'Sintaxis correcta: Para i <- 1 Hasta 10 Hacer',
+                 'El contador del Para no necesita declararse con Definir.');
+    if (!/\bhasta\b/i.test(t))
+      return ret('Falta "Hasta <valor>" en el ciclo Para.',
+                 'Sintaxis correcta: Para i <- 1 Hasta 10 Hacer');
+    if (!/\bhacer\s*$/i.test(t))
+      return ret('Falta la palabra "Hacer" al final del Para.',
+                 'Sintaxis correcta: Para i <- 1 Hasta 10 Hacer',
+                 'Con paso opcional: Para i <- 10 Hasta 1 Con Paso -1 Hacer');
   }
 
-  if (/^si\b/i.test(t) && !/\bentonces\s*$/i.test(t)) {
-    hints.push('Falta la palabra "Entonces" al final de la condición Si.');
-    hints.push('Sintaxis: Si <condición> Entonces');
-    if (!/<|>|=/.test(t)) hints.push('Tip: la condición debe comparar valores, ej: Si x > 0 Entonces');
-    return hints;
+  // Si sin Entonces
+  if (/^si\b/i.test(t) && !/\bentonces\s*$/i.test(t) && !/^sino/i.test(t) && !/^fin\s*si/i.test(t)) {
+    if (/<-/.test(t))
+      return ret('Dentro de un Si no se puede asignar — ¿falta Entonces?',
+                 'Sintaxis: Si condición Entonces',
+                 'Luego las instrucciones, y al final FinSi.');
+    return ret('Falta la palabra "Entonces" al final del Si.',
+               'Sintaxis: Si condición Entonces',
+               !/<|>|=/.test(t) ? 'La condición debe comparar valores: Si x > 0 Entonces' : '');
   }
 
-  if (/^mientras\b/i.test(t) && !/\bhacer\s*$/i.test(t)) {
-    hints.push('Falta la palabra "Hacer" al final de la condición Mientras.');
-    hints.push('Sintaxis: Mientras <condición> Hacer');
-    return hints;
+  // Mientras sin Hacer
+  if (/^mientras\b/i.test(t) && !/\bhacer\s*$/i.test(t))
+    return ret('Falta la palabra "Hacer" al final del Mientras.',
+               'Sintaxis: Mientras condición Hacer');
+
+  // Segun sin Hacer
+  if (/^seg[uú]n?\b/i.test(t) && !/\bhacer\s*$/i.test(t))
+    return ret('Falta la palabra "Hacer" al final de Segun.',
+               'Sintaxis: Segun variable Hacer');
+
+  // Definir sin Como
+  if (/^definir\b/i.test(t) && !/\bcomo\b/i.test(t))
+    return ret('Falta la palabra "Como" en la declaración.',
+               'Sintaxis: Definir variable Como Tipo',
+               'Tipos disponibles: Entero, Real, Cadena, Texto, Logico, Caracter.');
+
+  // Definir con tipo incorrecto
+  if (/^definir\b/i.test(t) && /\bcomo\b/i.test(t)) {
+    const tipoM = /\bcomo\s+(\w+)/i.exec(t);
+    const tipo = tipoM?.[1]?.toLowerCase();
+    const tiposValidos = ['entero','real','cadena','texto','logico','lógico','caracter','carácter'];
+    if (tipo && !tiposValidos.includes(tipo))
+      return ret(`"${tipoM[1]}" no es un tipo válido.`,
+                 'Tipos disponibles: Entero, Real, Cadena, Texto, Logico, Caracter.',
+                 tipo === 'string'  ? 'Usá "Cadena" en lugar de "String".'  :
+                 tipo === 'int'     ? 'Usá "Entero" en lugar de "Int".'      :
+                 tipo === 'float' || tipo === 'double' ? 'Usá "Real" en lugar de "' + tipoM[1] + '".' :
+                 tipo === 'bool' || tipo === 'boolean' ? 'Usá "Logico" en lugar de "' + tipoM[1] + '".' : '');
   }
 
-  if (/^segun\b|^según\b/i.test(t) && !/\bhacer\s*$/i.test(t)) {
-    hints.push('Falta la palabra "Hacer" al final de Segun.');
-    hints.push('Sintaxis: Segun <variable> Hacer');
-    return hints;
-  }
-
-  // ── 3. Bloques de cierre mal escritos ────────────────────────────────────
+  // ── 2. Bloques de cierre mal escritos ────────────────────────────────────
   const closers = [
-    [/^fin\s*si\b/i,       'FinSi'],
-    [/^fin\s*para\b/i,     'FinPara'],
-    [/^fin\s*mientras\b/i, 'FinMientras'],
-    [/^fin\s*repetir\b/i,  'FinRepetir'],
-    [/^fin\s*segun\b|^fin\s*según\b/i, 'FinSegun'],
-    [/^fin\s*proceso\b/i,  'FinProceso'],
-    [/^fin\s*algoritmo\b/i,'FinAlgoritmo'],
+    [/^fin\s+si\b/i,                       'FinSi',          'Si...Entonces'],
+    [/^end\s*if\b/i,                        'FinSi',          'Si...Entonces'],
+    [/^fin\s+para\b/i,                      'FinPara',        'Para...Hacer'],
+    [/^end\s*for\b/i,                       'FinPara',        'Para...Hacer'],
+    [/^fin\s+mientras\b/i,                  'FinMientras',    'Mientras...Hacer'],
+    [/^end\s*while\b/i,                     'FinMientras',    'Mientras...Hacer'],
+    [/^fin\s+repetir\b/i,                   'FinRepetir',     'Repetir...Hasta Que'],
+    [/^fin\s+seg[uú]n\b/i,                  'FinSegun',       'Segun...Hacer'],
+    [/^end\s*switch\b/i,                    'FinSegun',       'Segun...Hacer'],
+    [/^fin\s+proceso\b/i,                   'FinProceso',     'Proceso'],
+    [/^fin\s+algoritmo\b/i,                 'FinAlgoritmo',   'Algoritmo'],
+    [/^fin\s+subproceso\b/i,                'FinSubProceso',  'SubProceso'],
+    [/^fin\s+funci[oó]n\b/i,               'FinFuncion',     'Funcion'],
+    [/^end\s*sub\b|^end\s*proc/i,           'FinSubProceso',  'SubProceso'],
+    [/^end\s*function\b/i,                  'FinFuncion',     'Funcion'],
   ];
-  for (const [re, correct] of closers) {
-    if (re.test(t)) {
-      hints.push(`¿Quisiste escribir "${correct}"? (sin espacio entre Fin y el bloque)`);
-      return hints;
-    }
+  for (const [re, correct, block] of closers) {
+    if (re.test(t))
+      return ret(`¿Quisiste escribir "${correct}"? (sin espacio entre "Fin" y el nombre).`,
+                 `El bloque ${block} se cierra con "${correct}".`);
   }
 
-  // ── 4. Asignación con = en vez de <- ─────────────────────────────────────
-  if (/^[A-Za-záéíóúñÁÉÍÓÚÑ_]\w*\s*=\s*[^=]/.test(t) && !/^si\b/i.test(t)) {
+  // ── 3. Operadores incorrectos ─────────────────────────────────────────────
+
+  // Asignación con = en vez de <-
+  if (/^[A-Za-záéíóúñÁÉÍÓÚÑ_]\w*\s*=\s*[^=<>]/.test(t) && !/^si\b/i.test(t)) {
     const varName = t.split('=')[0].trim();
-    const rest = t.slice(t.indexOf('=')+1).trim();
-    hints.push('Para asignar un valor usa "<-" en vez de "=".');
-    hints.push(`Corrección: ${varName} <- ${rest}`);
-    return hints;
+    const rest    = t.slice(t.indexOf('=')+1).trim().replace(/;$/, '');
+    return ret('Para asignar usá "<-", no "=".',
+               `Corrección: ${varName} <- ${rest};`,
+               'El símbolo "=" se usa solo para comparar dentro de un Si.');
   }
 
-  // ── 5. Función sin resultado asignado (standalone call) ──────────────────
+  // -> en vez de <-
+  if (/->/.test(t))
+    return ret('El operador de asignación es "<-" (flecha a la izquierda), no "->".',
+               'Ejemplo: resultado <- a + b;');
+
+  // == en vez de =
+  if (/==/.test(t))
+    return ret('En PSeInt la comparación de igualdad es "=" (un solo signo), no "==".',
+               'Ejemplo: Si x = 5 Entonces');
+
+  // != en vez de <>
+  if (/!=/.test(t))
+    return ret('En PSeInt "distinto de" se escribe "<>", no "!=".',
+               'Ejemplo: Si a <> b Entonces');
+
+  // ── 4. Función built-in usada como instrucción ───────────────────────────
   const standaloneFn = /^([A-Za-záéíóúñÁÉÍÓÚÑ_]\w*)\s*\(/.exec(t);
   if (standaloneFn) {
-    const fnName = standaloneFn[1];
+    const fnName  = standaloneFn[1];
     const fnUpper = fnName.toUpperCase();
-    if (FUNCS.includes(fnUpper)) {
-      hints.push(`"${fnName}(...)" es una función que retorna un valor, no una instrucción sola.`);
-      hints.push(`Para usar el resultado asígnalo: variable <- ${fnName}(...)`);
-      return hints;
-    }
-    // Podría ser una palabra clave mal escrita
+    const BUILTIN_FUNCS = ['RC','ABS','LN','EXP','SEN','COS','TAN','ATAN','ASIN','ACOS','TRUNC','REDON','AZAR','MAYUSCULAS','MINUSCULAS','MAYUS','MINUS','LONGITUD','CONCATENAR','SUBCADENA','CONVERTIRANUMERO','CONVERTIRATEXTO','SUBSTR'];
+    if (BUILTIN_FUNCS.includes(fnUpper))
+      return ret(`"${fnName}(...)" es una función matemática que retorna un valor — no puede usarse como instrucción sola.`,
+                 `Asigná el resultado a una variable: resultado <- ${fnName}(...);`);
     const closest = closestKeyword(fnName);
-    if (closest) {
-      hints.push(`"${fnName}" no es una instrucción conocida. ¿Quisiste decir "${closest}"?`);
-      return hints;
-    }
+    if (closest)
+      return ret(`"${fnName}" no es una instrucción conocida.`,
+                 `¿Quisiste escribir "${closest}"?`);
   }
 
-  // ── 6. Palabras clave mal escritas (typos) ───────────────────────────────
-  // Extraer la primera palabra del texto y buscar parecidos
+  // ── 5. Leer con expresión en vez de variable ─────────────────────────────
+  if (/^leer\b/i.test(t)) {
+    const after = t.replace(/^leer\s*/i, '').trim();
+    if (/[+\-*/^()]/.test(after))
+      return ret('Leer solo acepta el nombre de una variable, no una expresión.',
+                 'Ejemplo: Leer edad;',
+                 'Si querés calcular algo, asignalo después: resultado <- edad * 2;');
+    if (/^"/.test(after))
+      return ret('Leer no acepta strings — solo nombres de variables.',
+                 'Ejemplo: Leer nombre;');
+  }
+
+  // ── 6. Escribir con <- (confusión con asignación) ────────────────────────
+  if (/^escribir\b/i.test(t) && /<-/.test(t))
+    return ret('Escribir no usa "<-". Simplemente listá los valores separados por comas.',
+               'Ejemplo: Escribir "El resultado es: ", resultado;');
+
+  // ── 7. Falta ; al final ───────────────────────────────────────────────────
+  if (!t.endsWith(';') && requiresSemicolon(t))
+    return ret('Falta el ";" al final de la instrucción.',
+               `Corrección: ${t};`);
+
+  // ── 8. Comillas sin cerrar ────────────────────────────────────────────────
+  const quoteCount = (t.match(/"/g) || []).length;
+  if (quoteCount % 2 !== 0)
+    return ret('Hay una comilla " sin cerrar en esta línea.',
+               'Verificá que cada string abra y cierre su comilla.');
+
+  // ── 9. Typos en palabras clave (Levenshtein) ──────────────────────────────
   const firstWord = /^([A-Za-záéíóúñÁÉÍÓÚÑ_]\w*)/.exec(t)?.[1];
   if (firstWord) {
     const closest = closestKeyword(firstWord);
     if (closest && closest.toLowerCase() !== firstWord.toLowerCase()) {
-      hints.push(`"${firstWord}" no es una instrucción conocida.`);
-      hints.push(`¿Quisiste decir "${closest}"?`);
+      add(`"${firstWord}" no es una instrucción reconocida.`);
+      add(`¿Quisiste escribir "${closest}"?`);
+      // Mostrar sintaxis de la palabra sugerida
+      const syntaxMap = {
+        'Escribir':    'Escribir expresión;',
+        'Leer':        'Leer variable;',
+        'Definir':     'Definir variable Como Tipo;',
+        'Dimension':   'Dimension arreglo[N];',
+        'Si':          'Si condición Entonces ... FinSi',
+        'Para':        'Para i <- 1 Hasta N Hacer ... FinPara',
+        'Mientras':    'Mientras condición Hacer ... FinMientras',
+        'Repetir':     'Repetir ... Hasta Que condición;',
+        'Segun':       'Segun variable Hacer ... FinSegun',
+        'SubProceso':  'SubProceso Nombre(params) ... FinSubProceso',
+        'Funcion':     'Funcion resultado <- Nombre(params) ... FinFuncion',
+      };
+      if (syntaxMap[closest]) add(`Sintaxis: ${syntaxMap[closest]}`);
+      return hints;
     }
   }
 
-  // ── 7. Operador de asignación invertido (-> en vez de <-) ────────────────
-  if (/->/.test(t)) {
-    hints.push('El operador de asignación es "<-" (izquierda), no "->" (derecha).');
-    hints.push('Ejemplo: resultado <- a + b');
-  }
+  // ── 10. Falta <- en posible asignación ───────────────────────────────────
+  if (hints.length === 0 && /^[A-Za-záéíóúñÁÉÍÓÚÑ_]\w*\s+[^<]/.test(t) && !/<-/.test(t) && !/\(/.test(t))
+    return ret('¿Falta el operador de asignación "<-"?',
+               `Ejemplo: ${firstWord || 'variable'} <- valor;`);
 
-  // ── 8. Comillas sin cerrar ────────────────────────────────────────────────
-  const quoteCount = (t.match(/"/g) || []).length;
-  if (quoteCount % 2 !== 0) {
-    hints.push('Hay una comilla " sin cerrar en esta línea.');
-  }
-
-  // ── 9. Falta <- en asignación (texto con palabras pero sin operador) ──────
-  if (hints.length === 0 && /^[A-Za-záéíóúñÁÉÍÓÚÑ_]\w*\s+\w/.test(t) && !/<-/.test(t)) {
-    hints.push('¿Falta el operador de asignación "<-"?');
-    hints.push('Ejemplo: variable <- expresión');
-  }
-
-  // ── 10. Pista genérica si no se encontró nada específico ─────────────────
-  if (hints.length === 0) {
-    hints.push('Instrucción no reconocida. Verificá la sintaxis y que no falte ";" al final.');
-  }
+  // ── 11. Genérico ──────────────────────────────────────────────────────────
+  if (hints.length === 0)
+    add('Instrucción no reconocida.',
+        'Verificá: ¿falta ";" al final?, ¿el nombre está bien escrito?, ¿la variable está declarada con Definir?');
 
   return hints;
 }
@@ -3154,10 +3240,26 @@ function preprocess2DArrayAccess(expr) {
   return result;
 }
 
-function translateExpression(expr, scope) {
+function translateExpression(expr, scope, line) {
   let e = preprocess2DArrayAccess(expr);
-  // Reemplazar accesos 1D también: var[idx] → scope var (JS lo maneja solo)
   scope = scope || {};
+
+  // Detectar == fuera de strings — error descriptivo
+  {
+    let inStr = false, i = 0;
+    while (i < e.length) {
+      if (e[i] === '"') { inStr = !inStr; }
+      if (!inStr && e[i] === '=' && e[i+1] === '=') {
+        throw new PseudoError(
+          'Operador "==" no válido en PSeInt.',
+          line || 1,
+          ['En PSeInt la comparación de igualdad es "=" (un solo signo), no "==".',
+           'Ejemplo correcto: Si x = 5 Entonces']
+        );
+      }
+      i++;
+    }
+  }
 
   // Proteger strings: extraer literales y reemplazar temporalmente
   const stringLiterals = [];
@@ -3362,7 +3464,7 @@ function evaluateExpression(expr, scope, line) {
     }
     return match;
   });
-  const translated = translateExpression(cleanExpr, scope);
+  const translated = translateExpression(cleanExpr, scope, line);
   const varNames = Object.keys(scope);
   try {
     const fn = new Function(...varNames, RUNTIME_HELPERS + ' return (' + translated + ');');
@@ -3438,12 +3540,28 @@ function sleep(ms) {
 }
 
 // Valor inicial según tipo declarado con Definir
-function defaultForType(tipo) {
+function defaultForType(tipo, line) {
   const t = (tipo || '').toLowerCase();
   if (t === 'entero' || t === 'real') return 0;
   if (t === 'logico' || t === 'lógico') return false;
   if (t === 'cadena' || t === 'texto' || t === 'caracter' || t === 'carácter') return '';
-  return 0;
+  // Tipo inválido — dar error descriptivo
+  const suggestions = {
+    'string': 'Cadena', 'str': 'Cadena', 'texto': 'Cadena',
+    'int': 'Entero', 'integer': 'Entero', 'numero': 'Entero',
+    'float': 'Real', 'double': 'Real', 'decimal': 'Real',
+    'bool': 'Logico', 'boolean': 'Logico',
+    'char': 'Caracter',
+  };
+  const sugerido = suggestions[t];
+  throw new PseudoError(
+    `Tipo de dato "${tipo}" no válido.`,
+    line || 1,
+    [
+      `Tipos disponibles: Entero, Real, Cadena, Texto, Logico, Caracter.`,
+      sugerido ? `¿Quisiste decir "${sugerido}"? → Definir variable Como ${sugerido};` : '',
+    ].filter(Boolean)
+  );
 }
 
 async function runInterpreter({ mainAst, subDefs }) {
@@ -3525,7 +3643,7 @@ async function runInterpreter({ mainAst, subDefs }) {
 
         case 'declare': {
           localDeclared.add(node.varName);
-          if (!(node.varName in localScope)) localScope[node.varName] = defaultForType(node.varType);
+          if (!(node.varName in localScope)) localScope[node.varName] = defaultForType(node.varType, node.line);
           return;
         }
 
@@ -3892,7 +4010,7 @@ async function runInterpreter({ mainAst, subDefs }) {
 
       case 'declare': {
         declared.add(node.varName);
-        if (!(node.varName in scope)) scope[node.varName] = defaultForType(node.varType);
+        if (!(node.varName in scope)) scope[node.varName] = defaultForType(node.varType, node.line);
         return;
       }
 
